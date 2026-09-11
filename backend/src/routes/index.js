@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import mongoose from 'mongoose';
 
+import authRoutes from './auth.routes.js';
+
 const router = Router();
 
 router.get('/health', (_req, res) => {
@@ -11,5 +13,7 @@ router.get('/health', (_req, res) => {
     uptime: Math.round(process.uptime()),
   });
 });
+
+router.use('/auth', authRoutes);
 
 export default router;
