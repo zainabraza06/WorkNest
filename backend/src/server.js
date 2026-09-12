@@ -3,12 +3,14 @@ import http from 'node:http';
 import { env } from './config/env.js';
 import { connectDB, disconnectDB } from './config/db.js';
 import { createApp } from './app.js';
+import { initSocket } from './socket/index.js';
 
 async function start() {
   await connectDB(env.MONGODB_URI);
 
   const app = createApp();
   const server = http.createServer(app);
+  initSocket(server);
 
   server.listen(env.PORT, () => {
     console.log(`WorkNest API listening on http://localhost:${env.PORT}`);

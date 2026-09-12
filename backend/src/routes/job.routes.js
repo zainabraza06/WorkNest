@@ -6,6 +6,8 @@ import { optionalAuth, requireAuth, requireRole } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { idParam } from '../validators/common.js';
 import { cancelJobSchema, createJobSchema, listJobsQuery, myJobsQuery, updateJobSchema } from '../validators/job.js';
+import { createOffer } from '../controllers/offer.controller.js';
+import { createOfferSchema } from '../validators/offer.js';
 
 const router = Router();
 const clientOnly = [requireAuth, requireRole(ROLES.CLIENT)];
@@ -17,5 +19,14 @@ router.get('/mine', clientOnly, validate({ query: myJobsQuery }), jobs.listMyJob
 router.get('/:id', optionalAuth, validate({ params: idParam() }), jobs.getJob);
 router.patch('/:id', clientOnly, validate({ params: idParam(), body: updateJobSchema }), jobs.updateJob);
 router.post('/:id/cancel', clientOnly, validate({ params: idParam(), body: cancelJobSchema }), jobs.cancelJob);
+
+// Workers open a negotiation on a job
+router.post(
+  '/:id/offers',
+  requireAuth,
+  requireRole(ROLES.WORKER),
+  validate({ params: idParam(), body: createOfferSchema }),
+  createOffer,
+);
 
 export default router;
