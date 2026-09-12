@@ -13,7 +13,9 @@ const timelineEntrySchema = new mongoose.Schema(
 
 const bookingSchema = new mongoose.Schema(
   {
-    job: { type: mongoose.Schema.Types.ObjectId, ref: 'Job', required: true, unique: true },
+    // Not unique: if a worker cancels, the job reopens and can get a new booking.
+    // "One active booking per job" is enforced by the atomic job-status guard when an offer is accepted.
+    job: { type: mongoose.Schema.Types.ObjectId, ref: 'Job', required: true, index: true },
     offer: { type: mongoose.Schema.Types.ObjectId, ref: 'Offer', required: true },
     worker: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
     client: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, index: true },
