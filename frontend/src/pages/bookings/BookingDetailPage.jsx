@@ -5,6 +5,7 @@ import { AlertTriangle, CalendarDays, Check, Clock, FileQuestion, Lock, Mail, Ma
 
 import { bookingsApi } from '@/api/negotiation';
 import { EscrowPayment } from '@/components/booking/EscrowPayment';
+import { ReviewPrompt } from '@/components/booking/ReviewPrompt';
 import { toast } from '@/components/feedback/toastStore';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
@@ -178,6 +179,8 @@ export default function BookingDetailPage() {
             </Card>
           )}
           {role === 'worker' && b.status === 'in_progress' && <InlineAlert tone="info">When you finish, ask {other.name} to mark the job complete to release your payment.</InlineAlert>}
+
+          {b.status === 'completed' && <ReviewPrompt booking={b} />}
 
           <Card>
             <CardHeader title="Agreed terms" />
