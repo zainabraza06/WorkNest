@@ -2,6 +2,7 @@ import { Review, WorkerProfile } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
 import { toPoint } from '../validators/common.js';
 import { deleteAsset, IMAGE_TRANSFORMS, signedUrl, uploadBuffer } from '../services/upload.service.js';
+import { refreshTrustScore } from '../services/trust.service.js';
 
 const MAX_PORTFOLIO = 12;
 const PUBLIC_USER_FIELDS = 'name avatar createdAt';
@@ -35,7 +36,10 @@ export async function createProfile(req, res) {
     throw ApiError.conflict('Worker profile already exists — use PATCH to update it');
   }
   const profile = await WorkerProfile.create({ ...toModelFields(req.valid.body), user: req.user._id });
-  res.status(201).json({ success: true, data: profile });
+  await refreshTrustScore(req.user._id);
+
+  // Re-read so the response carries the freshly computed trust score
+  res.status(201).json({ success: true, data: await WorkerProfile.findById(profile._id) });
 }
 
 export async function updateProfile(req, res) {
@@ -123,6 +127,8 @@ export async function decideIdVerification(req, res) {
   profile.idVerification.status = req.valid.body.status;
   profile.idVerification.reviewedAt = new Date();
   await profile.save();
+  // Verification is a Trust Score input, so rescore immediately
+  await refreshTrustScore(profile.user);
 
   res.json({ success: true, data: { status: profile.idVerification.status } });
 }

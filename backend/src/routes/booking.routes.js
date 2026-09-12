@@ -6,6 +6,8 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { idParam } from '../validators/common.js';
 import { bookingReasonSchema, disputeSchema, listBookingsQuery, resolveDisputeSchema } from '../validators/booking.js';
+import { createReview } from '../controllers/review.controller.js';
+import { createReviewSchema } from '../validators/review.js';
 
 const router = Router();
 const byId = { params: idParam() };
@@ -23,5 +25,8 @@ router.post('/:id/complete', validate(byId), bookings.completeBooking);
 router.post('/:id/cancel', validate({ ...byId, body: bookingReasonSchema }), bookings.cancelBooking);
 router.post('/:id/dispute', validate({ ...byId, body: disputeSchema }), bookings.disputeBooking);
 router.post('/:id/resolve', requireRole(ROLES.ADMIN), validate({ ...byId, body: resolveDisputeSchema }), bookings.resolveDispute);
+
+// Both sides review each other after a completed booking
+router.post('/:id/reviews', validate({ ...byId, body: createReviewSchema }), createReview);
 
 export default router;

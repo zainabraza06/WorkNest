@@ -1,6 +1,7 @@
 import { Booking, ClientProfile, Job, Payment, WorkerProfile } from '../models/index.js';
 import { BOOKING_STATUS, JOB_STATUS, PAYMENT_STATUS } from '../constants/index.js';
 import { emitToUser } from '../socket/index.js';
+import { refreshTrustScore } from './trust.service.js';
 
 export function pushTimeline(booking, status, by, note) {
   booking.status = status;
@@ -83,14 +84,17 @@ export async function recordCompletion(booking) {
   );
   await ClientProfile.updateOne({ user: booking.client }, { $inc: { 'stats.hires': 1 } });
   await Job.updateOne({ _id: booking.job }, { status: JOB_STATUS.COMPLETED });
+  await refreshTrustScore(booking.worker);
 }
 
 export async function recordWorkerCancellation(booking) {
   await WorkerProfile.updateOne({ user: booking.worker }, { $inc: { 'stats.totalJobs': 1, 'stats.cancelledJobs': 1 } });
+  await refreshTrustScore(booking.worker);
 }
 
 export async function recordDispute(booking) {
   await WorkerProfile.updateOne({ user: booking.worker }, { $inc: { 'stats.disputes': 1 } });
+  await refreshTrustScore(booking.worker);
 }
 
 export const findPayment = (booking) => Payment.findOne({ booking: booking._id });
