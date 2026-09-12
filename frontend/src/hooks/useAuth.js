@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
 import { authApi } from '@/api';
 import { useAuthStore } from '@/stores/authStore';
+import { disconnectSocket } from '@/realtime/socket';
 
 /** Where a user should land after signing in, based on role and whether their profile exists. */
 export function homePathFor(user, profile) {
@@ -41,6 +42,7 @@ export function useLogout() {
   const navigate = useNavigate();
   return () => {
     logout();
+    disconnectSocket();
     queryClient.clear();
     navigate('/', { replace: true });
   };

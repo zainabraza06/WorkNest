@@ -7,6 +7,8 @@ import { useLogout, useSessionSync } from '@/hooks/useAuth';
 import { cn } from '@/lib/cn';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
+import { Toaster } from '@/components/feedback/Toaster';
+import { RealtimeBridge } from '@/realtime/RealtimeBridge';
 import { Logo } from './Logo';
 
 function navFor(role) {
@@ -94,6 +96,8 @@ export function AppLayout() {
 
   return (
     <div className="flex min-h-dvh flex-col">
+      {user && <RealtimeBridge />}
+      <Toaster />
       <a href="#main" className="sr-only z-50 rounded-lg bg-white px-4 py-2 focus:not-sr-only focus:fixed focus:top-2 focus:left-2">
         Skip to content
       </a>
