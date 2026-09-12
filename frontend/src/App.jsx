@@ -17,6 +17,8 @@ const JobDetailPage = lazy(() => import('@/pages/jobs/JobDetailPage'));
 const JobPostPage = lazy(() => import('@/pages/jobs/JobPostPage'));
 const SendOfferPage = lazy(() => import('@/pages/jobs/SendOfferPage'));
 const NegotiationsPage = lazy(() => import('@/pages/negotiations/NegotiationsPage'));
+const BookingsPage = lazy(() => import('@/pages/bookings/BookingsPage'));
+const BookingDetailPage = lazy(() => import('@/pages/bookings/BookingDetailPage'));
 const ClientDashboardPage = lazy(() => import('@/pages/dashboard/ClientDashboardPage'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 
@@ -52,6 +54,8 @@ export default function App() {
             <Route path="profile/edit" element={<ProfileEditPage />} />
             <Route path="negotiations" element={<NegotiationsPage />} />
             <Route path="negotiations/:id" element={<NegotiationsPage />} />
+            <Route path="bookings" element={<BookingsPage />} />
+            <Route path="bookings/:id" element={<BookingDetailPage />} />
           </Route>
 
           <Route element={<RequireAuth roles={['client']} />}>
