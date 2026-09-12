@@ -4,6 +4,7 @@ import { useMutation } from '@tanstack/react-query';
 import { workersApi } from '@/api';
 import { ChipSelect } from '@/components/forms/ChipSelect';
 import { LocationFields, fromPoint } from '@/components/forms/LocationFields';
+import { FairPriceHint } from '@/components/pricing/FairPriceHint';
 import { TagInput } from '@/components/forms/TagInput';
 import { Button } from '@/components/ui/Button';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
@@ -105,10 +106,19 @@ export function WorkerProfileForm({ profile, onSaved, submitLabel = 'Save profil
 
       <Card>
         <CardHeader title="Your rates (PKR)" description="You can always negotiate per job. We'll show a fair-price range to help." />
-        <CardBody className="grid gap-4 sm:grid-cols-3">
+        <CardBody className="flex flex-col gap-4">
+          <FairPriceHint
+            category={form.categories[0]}
+            city={form.place.city}
+            experienceYears={Number(form.experienceYears) || 0}
+            onApply={(_min, _max, median) => set({ rates: { ...form.rates, daily: median } })}
+            applyLabel="Use typical daily rate"
+          />
+          <div className="grid gap-4 sm:grid-cols-3">
           <Input label="Daily rate" required type="number" inputMode="numeric" min={0} leading="Rs" value={form.rates.daily} onChange={(e) => set({ rates: { ...form.rates, daily: e.target.value } })} error={errors['rates.daily']} />
           <Input label="Hourly rate" type="number" inputMode="numeric" min={0} leading="Rs" value={form.rates.hourly} onChange={(e) => set({ rates: { ...form.rates, hourly: e.target.value } })} error={errors['rates.hourly']} />
           <Input label="Monthly rate" type="number" inputMode="numeric" min={0} leading="Rs" value={form.rates.monthly} onChange={(e) => set({ rates: { ...form.rates, monthly: e.target.value } })} error={errors['rates.monthly']} />
+          </div>
         </CardBody>
       </Card>
 

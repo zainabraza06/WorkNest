@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { LocateFixed, Users } from 'lucide-react';
+import { LocateFixed, Sparkles, Users } from 'lucide-react';
 
 import { workersApi } from '@/api';
 import { getCurrentPosition } from '@/components/forms/LocationFields';
@@ -13,6 +13,7 @@ import { LoadingRegion } from '@/components/ui/Skeleton';
 import { EmptyState, ErrorState } from '@/components/ui/States';
 import { WorkerCard, WorkerCardSkeleton } from '@/components/workers/WorkerCard';
 import { useUrlFilters } from '@/hooks/useUrlFilters';
+import { cn } from '@/lib/cn';
 import { CATEGORIES, CITIES } from '@/lib/constants';
 
 const SORTS = [
@@ -50,6 +51,8 @@ export default function DiscoverWorkersPage() {
 
   const data = query.data;
   const hasGeo = Boolean(filters.lat);
+  const smartOn = filters.mode === 'smart' && Boolean(filters.q);
+  const smartApplied = data?.mode === 'smart';
   const sortOptions = hasGeo ? SORTS : SORTS.filter((s) => s.value !== 'nearest');
 
   return (
@@ -59,7 +62,7 @@ export default function DiscoverWorkersPage() {
 
       <SearchBar
         value={filters.q ?? ''}
-        onSearch={(q) => update({ q, sort: q ? 'relevance' : filters.sort === 'relevance' ? 'trust' : filters.sort })}
+        onSearch={(q) => update({ q, mode: q ? filters.mode ?? 'smart' : undefined, sort: q ? 'relevance' : filters.sort === 'relevance' ? 'trust' : filters.sort })}
         placeholder="e.g. need someone to fix a leaking pipe today"
         label="Search workers"
       />
@@ -105,6 +108,7 @@ export default function DiscoverWorkersPage() {
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-ink-600" aria-live="polite">
               {data ? `${data.total} worker${data.total === 1 ? '' : 's'} found` : ' '}
+              {smartApplied && <span className="ml-1 text-primary-700">· ranked by best match</span>}
             </p>
             <div className="flex flex-wrap items-center gap-2">
               {hasGeo ? (
@@ -116,7 +120,20 @@ export default function DiscoverWorkersPage() {
                   <LocateFixed className="size-4" aria-hidden /> Near me
                 </Button>
               )}
-              <SortSelect value={filters.sort} onChange={(sort) => update({ sort })} options={sortOptions} />
+              {filters.q && (
+                <button
+                  type="button"
+                  onClick={() => update({ mode: smartOn ? 'keyword' : 'smart' })}
+                  aria-pressed={smartOn}
+                  className={cn(
+                    'inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-sm font-semibold transition-colors',
+                    smartOn ? 'border-primary-600 bg-primary-50 text-primary-800' : 'border-ink-300 bg-white text-ink-600 hover:bg-ink-100',
+                  )}
+                >
+                  <Sparkles className="size-4" aria-hidden /> Smart match
+                </button>
+              )}
+              {!smartApplied && <SortSelect value={filters.sort} onChange={(sort) => update({ sort })} options={sortOptions} />}
             </div>
           </div>
           {geoError && <p className="mb-3 text-sm text-danger-700">{geoError}</p>}

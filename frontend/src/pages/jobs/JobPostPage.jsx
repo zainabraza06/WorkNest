@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { jobsApi } from '@/api';
 import { JobForm, initialJobForm } from '@/components/jobs/JobForm';
+import { FairPriceHint } from '@/components/pricing/FairPriceHint';
 import { LoadingRegion, Skeleton } from '@/components/ui/Skeleton';
 import { ErrorState } from '@/components/ui/States';
 import { useAuthStore } from '@/stores/authStore';
@@ -47,6 +48,16 @@ export default function JobPostPage() {
         submitting={save.isPending}
         serverError={save.error}
         submitLabel={isEdit ? 'Save changes' : 'Post job'}
+        renderBudgetAside={(form, applyRange) => (
+          <FairPriceHint
+            category={form.category}
+            city={form.place.city}
+            durationType={form.durationType}
+            durationCount={Number(form.durationCount) || 1}
+            urgency={form.urgency}
+            onApply={(min, max) => applyRange(min, max)}
+          />
+        )}
         onSubmit={(body, { onFieldError }) =>
           save.mutate(body, { onError: (err) => err.details?.length && onFieldError(err.fieldErrors) })
         }

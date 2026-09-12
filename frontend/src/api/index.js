@@ -45,6 +45,11 @@ export const clientsApi = {
   update: (body) => unwrap(api.patch('/clients/me', body)),
 };
 
+export const priceApi = {
+  // AI fair-price guidance for a job or a worker's rate
+  suggest: (params) => unwrap(api.get('/price/suggest', { params: clean(params) })),
+};
+
 export const jobsApi = {
   list: (params) => unwrap(api.get('/jobs', { params: clean(params) })),
   mine: (params) => unwrap(api.get('/jobs/mine', { params: clean(params) })),

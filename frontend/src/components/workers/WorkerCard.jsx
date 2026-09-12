@@ -1,5 +1,5 @@
 import { Link } from 'react-router';
-import { BadgeCheck, MapPin } from 'lucide-react';
+import { BadgeCheck, MapPin, Sparkles } from 'lucide-react';
 
 import { Avatar } from '@/components/ui/Avatar';
 import { Card } from '@/components/ui/Card';
@@ -10,7 +10,7 @@ import { CATEGORY_MAP } from '@/lib/constants';
 import { formatPKR } from '@/lib/format';
 
 export function WorkerCard({ worker }) {
-  const { user, headline, categories = [], skills = [], rates, city, distanceKm, stats, trustScore, idVerified, isAvailable, experienceYears } = worker;
+  const { user, headline, categories = [], skills = [], rates, city, distanceKm, stats, trustScore, idVerified, isAvailable, experienceYears, matchReasons } = worker;
   const tags = [...categories.map((c) => CATEGORY_MAP[c]?.label ?? c), ...skills].slice(0, 3);
 
   return (
@@ -37,6 +37,17 @@ export function WorkerCard({ worker }) {
           </div>
         </div>
       </div>
+
+      {matchReasons?.length > 0 && (
+        <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Why this worker matches">
+          {matchReasons.map((reason) => (
+            <li key={reason} className="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2.5 py-0.5 text-xs font-medium text-primary-800">
+              <Sparkles className="size-3" aria-hidden />
+              {reason}
+            </li>
+          ))}
+        </ul>
+      )}
 
       {tags.length > 0 && (
         <ul className="mt-3 flex flex-wrap gap-1.5" aria-label="Skills">

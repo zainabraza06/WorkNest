@@ -10,9 +10,9 @@ const toDateInput = (d) => (d ? new Date(d).toISOString().slice(0, 10) : '');
 
 /**
  * Used for the first offer (mode="create") and for counter-offers (mode="counter").
- * `aside` is a slot for the AI fair-price hint.
+ * `renderAside` is a slot for the AI fair-price hint; it receives a setter for the amount.
  */
-export function OfferForm({ mode = 'create', initial, durationType, onSubmit, submitting, error, onCancel, aside, reference }) {
+export function OfferForm({ mode = 'create', initial, durationType, onSubmit, submitting, error, onCancel, renderAside, reference }) {
   const [form, setForm] = useState({
     amount: initial?.amount ?? '',
     durationCount: initial?.durationCount ?? 1,
@@ -64,7 +64,7 @@ export function OfferForm({ mode = 'create', initial, durationType, onSubmit, su
           }
         />
       </div>
-      {aside}
+      {renderAside?.((amount) => set({ amount }))}
 
       <div className="grid grid-cols-2 gap-4">
         <Input label={`Number of ${unit?.unitPlural ?? 'days'}`} type="number" inputMode="numeric" min={1} max={365} value={form.durationCount} onChange={(e) => set({ durationCount: e.target.value })} error={fieldErrors.durationCount} />

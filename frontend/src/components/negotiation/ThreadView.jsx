@@ -18,6 +18,7 @@ import { cn } from '@/lib/cn';
 import { formatBudget, formatDate, formatDuration, formatPKR } from '@/lib/format';
 import { getSocket, useSocketEvent } from '@/realtime/socket';
 import { useAuthStore } from '@/stores/authStore';
+import { FairPriceHint } from '@/components/pricing/FairPriceHint';
 import { OfferForm } from './OfferForm';
 import { OfferRoundCard } from './OfferRoundCard';
 
@@ -175,7 +176,27 @@ function ActionPanel({ offer }) {
       )}
 
       <Modal open={modal === 'counter'} onClose={() => setModal(null)} title="Make a counter-offer" description={`Current offer: ${formatPKR(current.amount)} for ${formatDuration(current.durationType, current.durationCount)}`}>
-        <OfferForm mode="counter" initial={current} reference={current} durationType={current.durationType} onSubmit={(body) => counter.mutate(body)} submitting={counter.isPending} error={counter.error} onCancel={() => setModal(null)} />
+        <OfferForm
+          mode="counter"
+          initial={current}
+          reference={current}
+          durationType={current.durationType}
+          onSubmit={(body) => counter.mutate(body)}
+          submitting={counter.isPending}
+          error={counter.error}
+          onCancel={() => setModal(null)}
+          renderAside={(setAmount) => (
+            <FairPriceHint
+              compact
+              category={offer.job.category}
+              city={offer.job.city}
+              durationType={current.durationType}
+              durationCount={current.durationCount}
+              onApply={(_min, _max, median) => setAmount(median)}
+              applyLabel="Use typical price"
+            />
+          )}
+        />
       </Modal>
 
       <Modal

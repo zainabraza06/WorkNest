@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { jobsApi } from '@/api';
 import { offersApi } from '@/api/negotiation';
 import { OfferForm } from '@/components/negotiation/OfferForm';
+import { FairPriceHint } from '@/components/pricing/FairPriceHint';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { LoadingRegion, Skeleton } from '@/components/ui/Skeleton';
 import { ErrorState } from '@/components/ui/States';
@@ -61,6 +62,17 @@ export default function SendOfferPage() {
             submitting={create.isPending}
             error={create.error}
             onCancel={() => navigate(-1)}
+            renderAside={(setAmount) => (
+              <FairPriceHint
+                category={j.category}
+                city={j.city}
+                durationType={j.durationType}
+                durationCount={j.durationCount}
+                urgency={j.urgency}
+                onApply={(_min, _max, median) => setAmount(median)}
+                applyLabel="Use typical price"
+              />
+            )}
           />
         </CardBody>
       </Card>
