@@ -11,6 +11,8 @@ export default defineConfig({
       NODE_ENV: 'test',
       MONGODB_URI: 'mongodb://placeholder-overridden-by-memory-server',
       JWT_SECRET: 'test-secret-that-is-long-enough',
+      // Tests exercise the fallback paths; AI-specific tests mock the client directly
+      AI_ENABLED: 'false',
     },
   },
 });

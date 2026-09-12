@@ -1,15 +1,46 @@
 import { WorkerProfile } from '../models/index.js';
+import { isAiEnabled, rankWorkers, toCandidate } from '../services/ai.service.js';
 import { KM_TO_RADIANS, keywordRegexFilter, paginateAggregate } from '../utils/query.js';
 
-/**
- * Keyword + structured-filter worker discovery.
- * (Semantic search via the AI service is layered on top of this in a later step.)
- */
-export async function searchWorkers(req, res) {
-  const { q, category, skills, city, minRate, maxRate, minTrust, minRating, verified, available, lat, lng, radiusKm, sort, page, limit } =
-    req.valid.query;
+/** How many workers to shortlist from MongoDB before the AI service re-ranks them. */
+const SMART_POOL_SIZE = 120;
 
+const PUBLIC_PROJECTION = {
+  user: 1,
+  headline: 1,
+  bio: 1,
+  categories: 1,
+  skills: 1,
+  experienceYears: 1,
+  rates: 1,
+  city: 1,
+  isAvailable: 1,
+  portfolio: { $slice: ['$portfolio', 3] },
+  stats: 1,
+  trustScore: { score: 1, label: 1 },
+  idVerified: { $eq: ['$idVerification.status', 'verified'] },
+  distanceMeters: 1,
+  relevance: 1,
+};
+
+const USER_LOOKUP = [
+  {
+    $lookup: {
+      from: 'users',
+      localField: 'user',
+      foreignField: '_id',
+      as: 'user',
+      pipeline: [{ $match: { isActive: true } }, { $project: { name: 1, avatar: 1 } }],
+    },
+  },
+  { $unwind: '$user' },
+];
+
+/** Structured filters shared by both the keyword and the smart path. */
+function buildFilter(q) {
+  const { category, skills, city, minRate, maxRate, minTrust, minRating, verified, available } = q;
   const filter = {};
+
   if (category?.length) filter.categories = { $in: category };
   if (skills?.length) filter.skills = { $in: skills };
   if (city) filter.city = city;
@@ -21,28 +52,92 @@ export async function searchWorkers(req, res) {
   }
   if (minTrust !== undefined) filter['trustScore.score'] = { $gte: minTrust };
   if (minRating !== undefined) filter['stats.avgRating'] = { $gte: minRating };
-  if (verified !== undefined) {
-    filter['idVerification.status'] = verified ? 'verified' : { $ne: 'verified' };
-  }
+  if (verified !== undefined) filter['idVerification.status'] = verified ? 'verified' : { $ne: 'verified' };
   if (available !== undefined) filter.isAvailable = available;
 
+  return filter;
+}
+
+function geoStage({ lat, lng, radiusKm }, filter) {
+  return {
+    $geoNear: {
+      near: { type: 'Point', coordinates: [lng, lat] },
+      distanceField: 'distanceMeters',
+      maxDistance: radiusKm * 1000,
+      query: filter,
+      spherical: true,
+    },
+  };
+}
+
+function withDistanceKm(rows) {
+  for (const row of rows) {
+    if (row.distanceMeters !== undefined) {
+      row.distanceKm = Math.round(row.distanceMeters / 100) / 10;
+      delete row.distanceMeters;
+    }
+  }
+  return rows;
+}
+
+/**
+ * AI-ranked discovery: MongoDB shortlists on hard filters, the AI service scores the
+ * shortlist against the client's own words, and we paginate the reordered list.
+ * Returns null if the AI service is unavailable so the caller can fall back to keywords.
+ */
+async function smartSearch(query) {
+  const { q, lat, page, limit } = query;
+  const filter = buildFilter(query);
+
+  const pipeline = lat !== undefined ? [geoStage(query, filter)] : [{ $match: filter }];
+  pipeline.push(
+    { $sort: { 'trustScore.score': -1, _id: 1 } },
+    { $limit: SMART_POOL_SIZE },
+    ...USER_LOOKUP,
+    { $project: PUBLIC_PROJECTION },
+  );
+
+  const pool = withDistanceKm(await WorkerProfile.aggregate(pipeline));
+  if (!pool.length) return { items: [], page, limit, total: 0, totalPages: 0, mode: 'smart' };
+
+  const ranked = await rankWorkers({
+    query: q,
+    category: query.category?.[0],
+    budgetMax: query.maxRate,
+    candidates: pool.map(toCandidate),
+  });
+  if (!ranked) return null;
+
+  const items = pool
+    .map((w) => {
+      const match = ranked.get(String(w._id));
+      return { ...w, matchScore: match?.score ?? 0, matchReasons: match?.reasons ?? [] };
+    })
+    .sort((a, b) => b.matchScore - a.matchScore);
+
+  return {
+    items: items.slice((page - 1) * limit, page * limit),
+    page,
+    limit,
+    total: items.length,
+    totalPages: Math.ceil(items.length / limit),
+    mode: 'smart',
+  };
+}
+
+/** Keyword + structured-filter discovery (MongoDB text index / regex + geo). */
+async function keywordSearch(query) {
+  const { q, lat, lng, radiusKm, sort, page, limit } = query;
+  const filter = buildFilter(query);
   const pipeline = [];
-  const hasGeo = lat !== undefined;
 
   if (sort === 'nearest') {
+    // $geoNear must come first and can't be combined with $text, so keywords fall back to regex
     if (q) Object.assign(filter, keywordRegexFilter(q, ['headline', 'bio', 'skills']));
-    pipeline.push({
-      $geoNear: {
-        near: { type: 'Point', coordinates: [lng, lat] },
-        distanceField: 'distanceMeters',
-        maxDistance: radiusKm * 1000,
-        query: filter,
-        spherical: true,
-      },
-    });
+    pipeline.push(geoStage(query, filter));
   } else {
     if (q) filter.$text = { $search: q };
-    if (hasGeo) filter.location = { $geoWithin: { $centerSphere: [[lng, lat], radiusKm * KM_TO_RADIANS] } };
+    if (lat !== undefined) filter.location = { $geoWithin: { $centerSphere: [[lng, lat], radiusKm * KM_TO_RADIANS] } };
     pipeline.push({ $match: filter });
     if (q) pipeline.push({ $addFields: { relevance: { $meta: 'textScore' } } });
 
@@ -56,44 +151,21 @@ export async function searchWorkers(req, res) {
     pipeline.push({ $sort: { ...sorts[sort], _id: 1 } });
   }
 
-  pipeline.push(
-    {
-      $lookup: {
-        from: 'users',
-        localField: 'user',
-        foreignField: '_id',
-        as: 'user',
-        pipeline: [{ $match: { isActive: true } }, { $project: { name: 1, avatar: 1 } }],
-      },
-    },
-    { $unwind: '$user' },
-    {
-      $project: {
-        user: 1,
-        headline: 1,
-        categories: 1,
-        skills: 1,
-        experienceYears: 1,
-        rates: 1,
-        city: 1,
-        isAvailable: 1,
-        portfolio: { $slice: ['$portfolio', 3] },
-        stats: 1,
-        trustScore: { score: 1, label: 1 },
-        idVerified: { $eq: ['$idVerification.status', 'verified'] },
-        distanceMeters: 1,
-        relevance: 1,
-      },
-    },
-  );
+  pipeline.push(...USER_LOOKUP, { $project: PUBLIC_PROJECTION });
 
   const result = await paginateAggregate(WorkerProfile, pipeline, { page, limit });
-  for (const w of result.items) {
-    if (w.distanceMeters !== undefined) {
-      w.distanceKm = Math.round(w.distanceMeters / 100) / 10;
-      delete w.distanceMeters;
-    }
+  withDistanceKm(result.items);
+  return { ...result, mode: 'keyword' };
+}
+
+export async function searchWorkers(req, res) {
+  const query = req.valid.query;
+
+  // "Smart" mode only makes sense with something to match against
+  if (query.mode === 'smart' && query.q && isAiEnabled()) {
+    const smart = await smartSearch(query);
+    if (smart) return res.json({ success: true, data: smart });
   }
 
-  res.json({ success: true, data: result });
+  res.json({ success: true, data: await keywordSearch(query) });
 }

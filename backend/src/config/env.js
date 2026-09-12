@@ -24,6 +24,11 @@ const schema = z.object({
   STRIPE_CURRENCY: z.string().default('pkr'),
 
   AI_SERVICE_URL: z.string().url().default('http://localhost:8000'),
+  AI_SERVICE_KEY: z.string().optional(),
+  AI_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
   AI_SERVICE_TIMEOUT_MS: z.coerce.number().int().positive().default(4000),
 });
 

@@ -102,6 +102,8 @@ export const workerSearchQuery = z
     lng: z.coerce.number().min(-180).max(180).optional(),
     radiusKm: z.coerce.number().min(1).max(200).default(25),
     sort: z.enum(['relevance', 'trust', 'rating', 'price_low', 'price_high', 'nearest']).default('trust'),
+    // 'smart' asks the AI service to rank results against the free-text query
+    mode: z.enum(['keyword', 'smart']).default('keyword'),
     ...pagination,
   })
   .refine((v) => (v.lat === undefined) === (v.lng === undefined), {

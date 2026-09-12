@@ -6,6 +6,7 @@ import bookingRoutes from './booking.routes.js';
 import clientRoutes from './client.routes.js';
 import jobRoutes from './job.routes.js';
 import offerRoutes from './offer.routes.js';
+import priceRoutes from './price.routes.js';
 import userRoutes from './user.routes.js';
 import workerRoutes from './worker.routes.js';
 
@@ -27,5 +28,6 @@ router.use('/clients', clientRoutes);
 router.use('/jobs', jobRoutes);
 router.use('/offers', offerRoutes);
 router.use('/bookings', bookingRoutes);
+router.use('/price', priceRoutes);
 
 export default router;

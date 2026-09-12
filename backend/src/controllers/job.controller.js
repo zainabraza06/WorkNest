@@ -3,6 +3,7 @@ import { JOB_STATUS, OFFER_STATUS, ROLES } from '../constants/index.js';
 import { ApiError } from '../utils/ApiError.js';
 import { toPoint } from '../validators/common.js';
 import { KM_TO_RADIANS, keywordRegexFilter, paginateAggregate } from '../utils/query.js';
+import { suggestPrice } from '../services/ai.service.js';
 
 const OPEN_STATUSES = [JOB_STATUS.POSTED, JOB_STATUS.NEGOTIATING];
 const EDITABLE_STATUSES = OPEN_STATUSES;
@@ -21,7 +22,18 @@ async function getOwnedJob(jobId, userId) {
 }
 
 export async function createJob(req, res) {
-  const job = await Job.create({ ...toModelFields(req.valid.body), client: req.user._id });
+  const body = req.valid.body;
+
+  // Best-effort fair-price snapshot stored with the job; null when the AI service is unavailable
+  const suggested = await suggestPrice(body);
+
+  const job = await Job.create({
+    ...toModelFields(body),
+    client: req.user._id,
+    ...(suggested && {
+      suggestedPrice: { min: suggested.min, max: suggested.max, median: suggested.median, source: suggested.source },
+    }),
+  });
 
   await ClientProfile.updateOne(
     { user: req.user._id },

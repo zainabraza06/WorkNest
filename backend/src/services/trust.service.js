@@ -1,4 +1,5 @@
 import { User, WorkerProfile } from '../models/index.js';
+import { scoreTrust } from './ai.service.js';
 
 /**
  * PLACEHOLDER Trust Score — a transparent weighted heuristic.
@@ -71,7 +72,7 @@ export function computePlaceholderTrust(f) {
 }
 
 /** Pluggable scorer so the AI client can be swapped in without touching callers. */
-let scorer = async (features) => computePlaceholderTrust(features);
+let scorer = async (features) => (await scoreTrust(features)) ?? computePlaceholderTrust(features);
 export const setTrustScorer = (fn) => {
   scorer = fn;
 };
