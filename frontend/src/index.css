@@ -108,6 +108,7 @@
   --animate-rise: rise 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
   --animate-fade: fade 0.4s ease both;
   --animate-marquee: marquee 40s linear infinite;
+  --animate-glow: glow 14s ease-in-out infinite;
 
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 
@@ -122,6 +123,10 @@
   @keyframes fade {
     from { opacity: 0; }
     to { opacity: 1; }
+  }
+  @keyframes glow {
+    0%, 100% { opacity: 0.75; transform: translate3d(0, 0, 0) scale(1); }
+    50% { opacity: 1; transform: translate3d(-2rem, 1.5rem, 0) scale(1.12); }
   }
   @keyframes marquee {
     from { transform: translateX(0); }

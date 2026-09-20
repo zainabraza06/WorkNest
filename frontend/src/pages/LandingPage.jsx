@@ -54,9 +54,9 @@ const PILLARS = [
 
 function HeroMatchCard() {
   return (
-    <div className="relative w-full max-w-sm" aria-hidden>
+    <div className="relative w-full" aria-hidden>
       <div className="absolute -inset-px rounded-xl bg-gradient-to-b from-primary-500/40 to-transparent" />
-      <div className="relative rounded-xl border border-white/10 bg-ink-900/80 p-5 backdrop-blur">
+      <div className="relative rounded-xl border border-white/10 bg-ink-900/80 p-4 backdrop-blur transition-transform duration-500 hover:-translate-y-1 lg:p-5">
         <p className="flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.14em] text-primary-400 uppercase">
           <Sparkles className="size-3" /> Top match · 86%
         </p>
@@ -72,7 +72,7 @@ function HeroMatchCard() {
           </div>
         </div>
 
-        <ul className="mt-4 space-y-1.5 border-t border-white/10 pt-4 text-sm text-ink-300">
+        <ul className="mt-4 space-y-1.5 border-t border-white/10 pt-4 text-ink-300 [font-size:clamp(0.8rem,1vw,0.875rem)]">
           {['Skills match what you described', 'Rated 4.6 by 49 clients', 'Only 4 km away'].map((r) => (
             <li key={r} className="flex items-start gap-2">
               <span className="mt-1.5 size-1 shrink-0 rounded-full bg-primary-500" />
@@ -84,7 +84,7 @@ function HeroMatchCard() {
         <div className="mt-4 flex items-end justify-between border-t border-white/10 pt-4">
           <div>
             <p className="text-[11px] font-semibold tracking-[0.12em] text-ink-500 uppercase">Daily rate</p>
-            <p className="numeric font-display text-2xl font-extrabold text-white">Rs 2,800</p>
+            <p className="numeric font-display text-xl font-extrabold text-white lg:text-2xl">Rs 2,800</p>
           </div>
           <span className="rounded-sm border border-success-500/30 bg-success-500/10 px-1.5 py-0.5 text-[11px] font-bold tracking-wide text-success-500 uppercase">
             Fair price
@@ -110,17 +110,17 @@ export default function LandingPage() {
       {/* ── Hero ─────────────────────────────────────────────── */}
       <section className="relative overflow-hidden bg-ink-950 text-white">
         <div className="grid-lines absolute inset-0 opacity-60" aria-hidden />
-        <div className="absolute -top-40 -right-32 size-[34rem] rounded-full bg-primary-500/20 blur-[120px]" aria-hidden />
+        <div className="absolute -top-40 -right-32 size-[34rem] animate-glow rounded-full bg-primary-500/20 blur-[120px]" aria-hidden />
 
-        <div className="relative mx-auto max-w-6xl px-4 pt-16 pb-12 lg:pt-24 lg:pb-16">
-          <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="relative mx-auto max-w-6xl px-4 pt-10 pb-10 lg:pt-16 lg:pb-14">
+          <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
             <div className="animate-rise">
               <p className="inline-flex items-center gap-2 rounded-sm border border-white/15 px-2 py-1 text-[11px] font-semibold tracking-[0.14em] text-ink-300 uppercase">
                 <span className="size-1.5 rounded-full bg-primary-500" />
                 AI-matched local labour · Pakistan
               </p>
 
-              <h1 className="mt-6 font-display text-5xl font-extrabold text-white lg:text-6xl">
+              <h1 className="mt-5 font-display font-extrabold text-white [font-size:clamp(2.5rem,6.2vw,5rem)] [line-height:0.95] [letter-spacing:-0.04em]">
                 Hire trusted
                 <br />
                 local workers
@@ -128,12 +128,12 @@ export default function LandingPage() {
                 <span className="text-primary-500">by the day.</span>
               </h1>
 
-              <p className="mt-6 max-w-lg text-lg text-ink-400">
+              <p className="mt-5 max-w-lg text-ink-400 [font-size:clamp(0.95rem,1.2vw,1.125rem)]">
                 Plumbers, electricians, house help and more — matched to what you actually need, priced fairly, and paid
                 only when the job is done.
               </p>
 
-              <form onSubmit={onSearch} role="search" className="mt-8 flex max-w-xl flex-col gap-2 sm:flex-row">
+              <form onSubmit={onSearch} role="search" className="mt-7 flex max-w-xl flex-col gap-2 sm:flex-row">
                 <label htmlFor="hero-search" className="sr-only">
                   What do you need done?
                 </label>
@@ -152,7 +152,7 @@ export default function LandingPage() {
                 </Button>
               </form>
 
-              <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-ink-400">
+              <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-ink-400">
                 <span className="inline-flex items-center gap-2">
                   <BadgeCheck className="size-4 text-primary-500" aria-hidden /> ID-verified workers
                 </span>
