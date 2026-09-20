@@ -1,0 +1,47 @@
+name: Keep services warm
+
+# Render's free tier spins a service down after ~15 minutes of no inbound traffic. A cold AI
+# service takes ~30s to wake — longer than the backend's request timeout — so the first search
+# after an idle period silently falls back to keyword results. Pinging both endpoints keeps
+# that from ever happening.
+#
+# It doubles as an uptime check: if the AI path is down, this run fails and GitHub emails you.
+#
+# Run it manually from the Actions tab ("Run workflow") a few minutes before a demo.
+
+on:
+  schedule:
+    - cron: '*/10 * * * *' # every 10 minutes (GitHub may delay this under load — that's fine)
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake the AI service
+        run: |
+          curl -sS --max-time 90 --retry 3 --retry-delay 10 --retry-all-errors \
+            "${{ vars.AI_URL || 'https://worknest-ai.onrender.com' }}/health" | tee /tmp/ai.json
+          echo
+
+      - name: Wake the API
+        run: |
+          curl -sS --max-time 90 --retry 3 --retry-delay 10 --retry-all-errors \
+            "${{ vars.API_URL || 'https://worknest-qicp.onrender.com' }}/api/health" | tee /tmp/api.json
+          echo
+
+      - name: Check the models are the ones serving
+        run: |
+          grep -q '"pricing":"gb-' /tmp/ai.json || { echo "::error::AI service is not serving the trained pricing model"; exit 1; }
+          grep -q '"matching":"semantic-' /tmp/ai.json || { echo "::error::AI service fell back to lexical matching"; exit 1; }
+          grep -q '"db":"connected"' /tmp/api.json || { echo "::error::API cannot reach MongoDB"; exit 1; }
+
+      - name: Check the backend can actually reach the AI service
+        run: |
+          # The breaker opens for 30s after a failure, so give a just-woken service a moment
+          sleep 35
+          MODE=$(curl -sS --max-time 60 \
+            "${{ vars.API_URL || 'https://worknest-qicp.onrender.com' }}/api/workers?mode=smart&q=leaking%20pipe" \
+            | grep -o '"mode":"[a-z]*"' | head -1)
+          echo "search $MODE"
+          [ "$MODE" = '"mode":"smart"' ] || { echo "::error::Backend fell back to keyword search — check AI_SERVICE_URL and AI_ENABLED"; exit 1; }

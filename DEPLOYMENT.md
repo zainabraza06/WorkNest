@@ -158,6 +158,33 @@ backend's `CLIENT_URL` → redeploy backend.
 
 Also: **Atlas → Network Access → allow `0.0.0.0/0`**, or the deployed backend cannot connect.
 
+### Keeping free-tier services awake
+
+Render spins a free service down after ~15 minutes idle. A cold AI service takes ~30 s to wake —
+longer than the backend's request timeout — so the first search after an idle period silently
+returns keyword results instead of AI-ranked ones.
+
+`.github/workflows/keep-warm.yml` pings both services every 10 minutes and **fails loudly** if
+the AI path is broken (wrong `AI_SERVICE_URL`, `AI_ENABLED=false`, models not loading). Run it
+manually from the Actions tab a few minutes before a demo.
+
+Point it at your own URLs with repo variables (Settings → Secrets and variables → Actions →
+Variables): `API_URL` and `AI_URL`. It falls back to the deployed defaults otherwise.
+
+Also raise the backend's patience so a *waking* service isn't cut off mid-handshake:
+
+```env
+AI_SERVICE_TIMEOUT_MS=15000    # on the backend service; default 4000 is too tight for a cold start
+```
+
+Pre-demo check — this is the one command that tells you whether the AI path is live:
+
+```bash
+curl -s "https://your-backend.onrender.com/api/workers?mode=smart&q=leaking%20pipe" | grep -o '"mode":"[a-z]*"'
+# "mode":"smart"   → AI ranking is live
+# "mode":"keyword" → AI asleep or unreachable; wait 30s and retry
+```
+
 ### Things that will bite you
 
 - **Free tiers sleep.** Render idles after 15 minutes; the first request takes ~50 s. Warm both
