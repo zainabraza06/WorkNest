@@ -1,0 +1,38 @@
+{
+  "mae": 2.589459711918306,
+  "r2": 0.9273133540350759,
+  "new_accounts": {
+    "n": 227,
+    "mae": 2.38,
+    "mean_predicted": 53.2
+  },
+  "feature_importances": {
+    "id_verified": 0.2581,
+    "repeat_hires": 0.2445,
+    "avg_rating": 0.1757,
+    "completed_jobs": 0.1246,
+    "disputes": 0.0534,
+    "portfolio_count": 0.0402,
+    "cancelled_jobs": 0.0369,
+    "account_age_days": 0.0365,
+    "avg_response_minutes": 0.0171,
+    "review_count": 0.0103,
+    "total_jobs": 0.0026,
+    "response_known": 0.0
+  },
+  "features": [
+    "completed_jobs",
+    "total_jobs",
+    "cancelled_jobs",
+    "avg_rating",
+    "review_count",
+    "repeat_hires",
+    "disputes",
+    "avg_response_minutes",
+    "response_known",
+    "account_age_days",
+    "id_verified",
+    "portfolio_count"
+  ],
+  "n_rows": 6000
+}

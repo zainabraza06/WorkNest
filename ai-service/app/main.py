@@ -4,9 +4,9 @@ WorkNest AI service.
 Stateless by design: every endpoint receives JSON and returns JSON.
 This service never connects to MongoDB — the Express backend owns all data.
 
-All three models are currently DUMMY implementations (transparent heuristics with the
-same request/response contracts as the trained versions). See each module in
-app/services/ for its swap-in plan.
+Pricing and Trust are served by trained scikit-learn models (see scripts/); matching is a
+transparent heuristic. Every model falls back to a documented heuristic when its artifact is
+missing, so the contract holds either way — /health reports which path is live.
 """
 
 from fastapi import FastAPI
@@ -14,6 +14,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.routers import matching, pricing, trust
+from app.services import pricing as pricing_service
+from app.services import trust as trust_service
+from app.services.model_registry import backend_name, price_meta, price_model, trust_meta, trust_model
 
 settings = get_settings()
 
@@ -41,8 +44,13 @@ def health() -> dict:
         "status": "ok",
         "service": "worknest-ai",
         "backends": {
+            # Reported from the loaded artifacts, so "is the model actually serving?" is never a guess
             "matching": settings.matching_backend,
-            "trust": settings.trust_backend,
-            "pricing": settings.pricing_backend,
+            "trust": backend_name(trust_model(), trust_service.MODEL_NAME, trust_service.FALLBACK_NAME),
+            "pricing": backend_name(price_model(), pricing_service.MODEL_NAME, pricing_service.FALLBACK_NAME),
+        },
+        "metrics": {
+            "pricing": {k: price_meta().get(k) for k in ("mae", "r2", "n_rows") if price_meta()},
+            "trust": {k: trust_meta().get(k) for k in ("mae", "r2", "n_rows") if trust_meta()},
         },
     }

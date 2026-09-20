@@ -3,10 +3,7 @@ uvicorn[standard]>=0.32
 pydantic>=2.9
 pydantic-settings>=2.6
 
-# ── Added when dummy logic is replaced with real models ──
-# sentence-transformers
-# faiss-cpu
-# scikit-learn
-# xgboost
-# numpy
-# pandas
+# ── Models (needed to serve real predictions and to retrain) ──
+scikit-learn>=1.5
+pandas>=2.2
+joblib>=1.4

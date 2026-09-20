@@ -1,0 +1,902 @@
+{
+  "plumbing": {
+    "Karachi": [
+      2310,
+      2940
+    ],
+    "Lahore": [
+      2200,
+      2800
+    ],
+    "Islamabad": [
+      2530,
+      3220
+    ],
+    "Rawalpindi": [
+      2200,
+      2800
+    ],
+    "Faisalabad": [
+      1980,
+      2520
+    ],
+    "Multan": [
+      1870,
+      2380
+    ],
+    "Peshawar": [
+      1980,
+      2520
+    ],
+    "Quetta": [
+      1980,
+      2520
+    ],
+    "Hyderabad": [
+      1870,
+      2380
+    ],
+    "Sialkot": [
+      2024,
+      2576
+    ],
+    "Gujranwala": [
+      1936,
+      2464
+    ],
+    "Other": [
+      1980,
+      2520
+    ]
+  },
+  "electrical": {
+    "Karachi": [
+      2587,
+      3293
+    ],
+    "Lahore": [
+      2464,
+      3136
+    ],
+    "Islamabad": [
+      2834,
+      3606
+    ],
+    "Rawalpindi": [
+      2464,
+      3136
+    ],
+    "Faisalabad": [
+      2218,
+      2822
+    ],
+    "Multan": [
+      2094,
+      2666
+    ],
+    "Peshawar": [
+      2218,
+      2822
+    ],
+    "Quetta": [
+      2218,
+      2822
+    ],
+    "Hyderabad": [
+      2094,
+      2666
+    ],
+    "Sialkot": [
+      2267,
+      2885
+    ],
+    "Gujranwala": [
+      2168,
+      2760
+    ],
+    "Other": [
+      2218,
+      2822
+    ]
+  },
+  "carpentry": {
+    "Karachi": [
+      2402,
+      3058
+    ],
+    "Lahore": [
+      2288,
+      2912
+    ],
+    "Islamabad": [
+      2631,
+      3349
+    ],
+    "Rawalpindi": [
+      2288,
+      2912
+    ],
+    "Faisalabad": [
+      2059,
+      2621
+    ],
+    "Multan": [
+      1945,
+      2475
+    ],
+    "Peshawar": [
+      2059,
+      2621
+    ],
+    "Quetta": [
+      2059,
+      2621
+    ],
+    "Hyderabad": [
+      1945,
+      2475
+    ],
+    "Sialkot": [
+      2105,
+      2679
+    ],
+    "Gujranwala": [
+      2013,
+      2563
+    ],
+    "Other": [
+      2059,
+      2621
+    ]
+  },
+  "painting": {
+    "Karachi": [
+      2033,
+      2587
+    ],
+    "Lahore": [
+      1936,
+      2464
+    ],
+    "Islamabad": [
+      2226,
+      2834
+    ],
+    "Rawalpindi": [
+      1936,
+      2464
+    ],
+    "Faisalabad": [
+      1742,
+      2218
+    ],
+    "Multan": [
+      1646,
+      2094
+    ],
+    "Peshawar": [
+      1742,
+      2218
+    ],
+    "Quetta": [
+      1742,
+      2218
+    ],
+    "Hyderabad": [
+      1646,
+      2094
+    ],
+    "Sialkot": [
+      1781,
+      2267
+    ],
+    "Gujranwala": [
+      1704,
+      2168
+    ],
+    "Other": [
+      1742,
+      2218
+    ]
+  },
+  "masonry": {
+    "Karachi": [
+      2218,
+      2822
+    ],
+    "Lahore": [
+      2112,
+      2688
+    ],
+    "Islamabad": [
+      2429,
+      3091
+    ],
+    "Rawalpindi": [
+      2112,
+      2688
+    ],
+    "Faisalabad": [
+      1901,
+      2419
+    ],
+    "Multan": [
+      1795,
+      2285
+    ],
+    "Peshawar": [
+      1901,
+      2419
+    ],
+    "Quetta": [
+      1901,
+      2419
+    ],
+    "Hyderabad": [
+      1795,
+      2285
+    ],
+    "Sialkot": [
+      1943,
+      2473
+    ],
+    "Gujranwala": [
+      1859,
+      2365
+    ],
+    "Other": [
+      1901,
+      2419
+    ]
+  },
+  "cleaning": {
+    "Karachi": [
+      1386,
+      1764
+    ],
+    "Lahore": [
+      1320,
+      1680
+    ],
+    "Islamabad": [
+      1518,
+      1932
+    ],
+    "Rawalpindi": [
+      1320,
+      1680
+    ],
+    "Faisalabad": [
+      1188,
+      1512
+    ],
+    "Multan": [
+      1122,
+      1428
+    ],
+    "Peshawar": [
+      1188,
+      1512
+    ],
+    "Quetta": [
+      1188,
+      1512
+    ],
+    "Hyderabad": [
+      1122,
+      1428
+    ],
+    "Sialkot": [
+      1214,
+      1546
+    ],
+    "Gujranwala": [
+      1162,
+      1478
+    ],
+    "Other": [
+      1188,
+      1512
+    ]
+  },
+  "house_help": {
+    "Karachi": [
+      1201,
+      1529
+    ],
+    "Lahore": [
+      1144,
+      1456
+    ],
+    "Islamabad": [
+      1316,
+      1674
+    ],
+    "Rawalpindi": [
+      1144,
+      1456
+    ],
+    "Faisalabad": [
+      1030,
+      1310
+    ],
+    "Multan": [
+      972,
+      1238
+    ],
+    "Peshawar": [
+      1030,
+      1310
+    ],
+    "Quetta": [
+      1030,
+      1310
+    ],
+    "Hyderabad": [
+      972,
+      1238
+    ],
+    "Sialkot": [
+      1052,
+      1340
+    ],
+    "Gujranwala": [
+      1007,
+      1281
+    ],
+    "Other": [
+      1030,
+      1310
+    ]
+  },
+  "cooking": {
+    "Karachi": [
+      1663,
+      2117
+    ],
+    "Lahore": [
+      1584,
+      2016
+    ],
+    "Islamabad": [
+      1822,
+      2318
+    ],
+    "Rawalpindi": [
+      1584,
+      2016
+    ],
+    "Faisalabad": [
+      1426,
+      1814
+    ],
+    "Multan": [
+      1346,
+      1714
+    ],
+    "Peshawar": [
+      1426,
+      1814
+    ],
+    "Quetta": [
+      1426,
+      1814
+    ],
+    "Hyderabad": [
+      1346,
+      1714
+    ],
+    "Sialkot": [
+      1457,
+      1855
+    ],
+    "Gujranwala": [
+      1394,
+      1774
+    ],
+    "Other": [
+      1426,
+      1814
+    ]
+  },
+  "babysitting": {
+    "Karachi": [
+      1386,
+      1764
+    ],
+    "Lahore": [
+      1320,
+      1680
+    ],
+    "Islamabad": [
+      1518,
+      1932
+    ],
+    "Rawalpindi": [
+      1320,
+      1680
+    ],
+    "Faisalabad": [
+      1188,
+      1512
+    ],
+    "Multan": [
+      1122,
+      1428
+    ],
+    "Peshawar": [
+      1188,
+      1512
+    ],
+    "Quetta": [
+      1188,
+      1512
+    ],
+    "Hyderabad": [
+      1122,
+      1428
+    ],
+    "Sialkot": [
+      1214,
+      1546
+    ],
+    "Gujranwala": [
+      1162,
+      1478
+    ],
+    "Other": [
+      1188,
+      1512
+    ]
+  },
+  "elderly_care": {
+    "Karachi": [
+      1848,
+      2352
+    ],
+    "Lahore": [
+      1760,
+      2240
+    ],
+    "Islamabad": [
+      2024,
+      2576
+    ],
+    "Rawalpindi": [
+      1760,
+      2240
+    ],
+    "Faisalabad": [
+      1584,
+      2016
+    ],
+    "Multan": [
+      1496,
+      1904
+    ],
+    "Peshawar": [
+      1584,
+      2016
+    ],
+    "Quetta": [
+      1584,
+      2016
+    ],
+    "Hyderabad": [
+      1496,
+      1904
+    ],
+    "Sialkot": [
+      1619,
+      2061
+    ],
+    "Gujranwala": [
+      1549,
+      1971
+    ],
+    "Other": [
+      1584,
+      2016
+    ]
+  },
+  "gardening": {
+    "Karachi": [
+      1478,
+      1882
+    ],
+    "Lahore": [
+      1408,
+      1792
+    ],
+    "Islamabad": [
+      1619,
+      2061
+    ],
+    "Rawalpindi": [
+      1408,
+      1792
+    ],
+    "Faisalabad": [
+      1267,
+      1613
+    ],
+    "Multan": [
+      1197,
+      1523
+    ],
+    "Peshawar": [
+      1267,
+      1613
+    ],
+    "Quetta": [
+      1267,
+      1613
+    ],
+    "Hyderabad": [
+      1197,
+      1523
+    ],
+    "Sialkot": [
+      1295,
+      1649
+    ],
+    "Gujranwala": [
+      1239,
+      1577
+    ],
+    "Other": [
+      1267,
+      1613
+    ]
+  },
+  "driving": {
+    "Karachi": [
+      2033,
+      2587
+    ],
+    "Lahore": [
+      1936,
+      2464
+    ],
+    "Islamabad": [
+      2226,
+      2834
+    ],
+    "Rawalpindi": [
+      1936,
+      2464
+    ],
+    "Faisalabad": [
+      1742,
+      2218
+    ],
+    "Multan": [
+      1646,
+      2094
+    ],
+    "Peshawar": [
+      1742,
+      2218
+    ],
+    "Quetta": [
+      1742,
+      2218
+    ],
+    "Hyderabad": [
+      1646,
+      2094
+    ],
+    "Sialkot": [
+      1781,
+      2267
+    ],
+    "Gujranwala": [
+      1704,
+      2168
+    ],
+    "Other": [
+      1742,
+      2218
+    ]
+  },
+  "ac_repair": {
+    "Karachi": [
+      2772,
+      3528
+    ],
+    "Lahore": [
+      2640,
+      3360
+    ],
+    "Islamabad": [
+      3036,
+      3864
+    ],
+    "Rawalpindi": [
+      2640,
+      3360
+    ],
+    "Faisalabad": [
+      2376,
+      3024
+    ],
+    "Multan": [
+      2244,
+      2856
+    ],
+    "Peshawar": [
+      2376,
+      3024
+    ],
+    "Quetta": [
+      2376,
+      3024
+    ],
+    "Hyderabad": [
+      2244,
+      2856
+    ],
+    "Sialkot": [
+      2429,
+      3091
+    ],
+    "Gujranwala": [
+      2323,
+      2957
+    ],
+    "Other": [
+      2376,
+      3024
+    ]
+  },
+  "appliance_repair": {
+    "Karachi": [
+      2402,
+      3058
+    ],
+    "Lahore": [
+      2288,
+      2912
+    ],
+    "Islamabad": [
+      2631,
+      3349
+    ],
+    "Rawalpindi": [
+      2288,
+      2912
+    ],
+    "Faisalabad": [
+      2059,
+      2621
+    ],
+    "Multan": [
+      1945,
+      2475
+    ],
+    "Peshawar": [
+      2059,
+      2621
+    ],
+    "Quetta": [
+      2059,
+      2621
+    ],
+    "Hyderabad": [
+      1945,
+      2475
+    ],
+    "Sialkot": [
+      2105,
+      2679
+    ],
+    "Gujranwala": [
+      2013,
+      2563
+    ],
+    "Other": [
+      2059,
+      2621
+    ]
+  },
+  "welding": {
+    "Karachi": [
+      2587,
+      3293
+    ],
+    "Lahore": [
+      2464,
+      3136
+    ],
+    "Islamabad": [
+      2834,
+      3606
+    ],
+    "Rawalpindi": [
+      2464,
+      3136
+    ],
+    "Faisalabad": [
+      2218,
+      2822
+    ],
+    "Multan": [
+      2094,
+      2666
+    ],
+    "Peshawar": [
+      2218,
+      2822
+    ],
+    "Quetta": [
+      2218,
+      2822
+    ],
+    "Hyderabad": [
+      2094,
+      2666
+    ],
+    "Sialkot": [
+      2267,
+      2885
+    ],
+    "Gujranwala": [
+      2168,
+      2760
+    ],
+    "Other": [
+      2218,
+      2822
+    ]
+  },
+  "moving_labor": {
+    "Karachi": [
+      1663,
+      2117
+    ],
+    "Lahore": [
+      1584,
+      2016
+    ],
+    "Islamabad": [
+      1822,
+      2318
+    ],
+    "Rawalpindi": [
+      1584,
+      2016
+    ],
+    "Faisalabad": [
+      1426,
+      1814
+    ],
+    "Multan": [
+      1346,
+      1714
+    ],
+    "Peshawar": [
+      1426,
+      1814
+    ],
+    "Quetta": [
+      1426,
+      1814
+    ],
+    "Hyderabad": [
+      1346,
+      1714
+    ],
+    "Sialkot": [
+      1457,
+      1855
+    ],
+    "Gujranwala": [
+      1394,
+      1774
+    ],
+    "Other": [
+      1426,
+      1814
+    ]
+  },
+  "security_guard": {
+    "Karachi": [
+      1571,
+      1999
+    ],
+    "Lahore": [
+      1496,
+      1904
+    ],
+    "Islamabad": [
+      1720,
+      2190
+    ],
+    "Rawalpindi": [
+      1496,
+      1904
+    ],
+    "Faisalabad": [
+      1346,
+      1714
+    ],
+    "Multan": [
+      1272,
+      1618
+    ],
+    "Peshawar": [
+      1346,
+      1714
+    ],
+    "Quetta": [
+      1346,
+      1714
+    ],
+    "Hyderabad": [
+      1272,
+      1618
+    ],
+    "Sialkot": [
+      1376,
+      1752
+    ],
+    "Gujranwala": [
+      1316,
+      1676
+    ],
+    "Other": [
+      1346,
+      1714
+    ]
+  },
+  "other": {
+    "Karachi": [
+      1848,
+      2352
+    ],
+    "Lahore": [
+      1760,
+      2240
+    ],
+    "Islamabad": [
+      2024,
+      2576
+    ],
+    "Rawalpindi": [
+      1760,
+      2240
+    ],
+    "Faisalabad": [
+      1584,
+      2016
+    ],
+    "Multan": [
+      1496,
+      1904
+    ],
+    "Peshawar": [
+      1584,
+      2016
+    ],
+    "Quetta": [
+      1584,
+      2016
+    ],
+    "Hyderabad": [
+      1496,
+      1904
+    ],
+    "Sialkot": [
+      1619,
+      2061
+    ],
+    "Gujranwala": [
+      1549,
+      1971
+    ],
+    "Other": [
+      1584,
+      2016
+    ]
+  }
+}

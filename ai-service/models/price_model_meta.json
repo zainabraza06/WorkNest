@@ -1,0 +1,39 @@
+{
+  "mae": 2128.7689392398684,
+  "r2": 0.9705169819468438,
+  "mean_price": 21877.68454258675,
+  "per_duration": {
+    "monthly": {
+      "mae": 4845.0,
+      "r2": 0.7918,
+      "mean_price": 49332
+    },
+    "one_day": {
+      "mae": 234.2,
+      "r2": 0.7875,
+      "mean_price": 2336
+    },
+    "weekly": {
+      "mae": 1266.8,
+      "r2": 0.7941,
+      "mean_price": 13556
+    }
+  },
+  "feature_importances": {
+    "duration_type": 0.8708,
+    "category": 0.0987,
+    "urgency": 0.0143,
+    "experience_years": 0.0097,
+    "city": 0.0066
+  },
+  "categorical_features": [
+    "category",
+    "city",
+    "duration_type",
+    "urgency"
+  ],
+  "numeric_features": [
+    "experience_years"
+  ],
+  "n_rows": 4752
+}

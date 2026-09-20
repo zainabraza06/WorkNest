@@ -26,11 +26,16 @@ venv/
 .pytest_cache/
 *.egg-info/
 
-# ML artifacts (large, regenerate locally)
+# ML build artifacts — regenerate with ai-service/scripts (see ai-service/README.md).
+# Kept out of git on purpose: they are outputs, not source.
 ai-service/models/*.pkl
 ai-service/models/*.joblib
 ai-service/models/*.gguf
+ai-service/data/*.csv
 ai-service/data/raw/
+
+# Archives
+*.zip
 
 # OS / editor
 .DS_Store
