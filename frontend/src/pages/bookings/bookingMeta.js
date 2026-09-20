@@ -1,6 +1,6 @@
 export const BOOKING_STATUS_META = {
-  pending_payment: { label: 'Awaiting payment', tone: 'secondary' },
-  confirmed: { label: 'Confirmed', tone: 'primary' },
+  pending_payment: { label: 'Awaiting payment', tone: 'warning' },
+  confirmed: { label: 'Confirmed', tone: 'solid' },
   in_progress: { label: 'In progress', tone: 'success' },
   completed: { label: 'Completed', tone: 'neutral' },
   cancelled: { label: 'Cancelled', tone: 'danger' },
@@ -8,8 +8,8 @@ export const BOOKING_STATUS_META = {
 };
 
 export const PAYMENT_STATUS_META = {
-  requires_payment: { label: 'Not paid yet', tone: 'secondary' },
-  held: { label: 'Held in escrow', tone: 'primary' },
+  requires_payment: { label: 'Not paid yet', tone: 'warning' },
+  held: { label: 'Held in escrow', tone: 'solid' },
   released: { label: 'Released to worker', tone: 'success' },
   refunded: { label: 'Refunded', tone: 'neutral' },
   failed: { label: 'Payment failed', tone: 'danger' },

@@ -66,8 +66,8 @@ export function EscrowPayment({ booking }) {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex gap-3 rounded-lg bg-primary-50 p-3 text-sm text-primary-900">
-        <ShieldCheck className="size-5 shrink-0 text-primary-700" aria-hidden />
+      <div className="flex gap-3 rounded-lg bg-ink-50 p-3 text-sm text-primary-900">
+        <ShieldCheck className="size-5 shrink-0 text-primary-600" aria-hidden />
         <p>Your payment is held securely and only released to the worker after you confirm the job is complete. Cancel before the job starts for a full refund.</p>
       </div>
 

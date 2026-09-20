@@ -58,7 +58,7 @@ function ThreadList({ activeId, jobFilter }) {
             <Link
               to={`/negotiations/${o._id}${jobFilter ? `?job=${jobFilter}` : ''}`}
               aria-current={activeId === o._id ? 'page' : undefined}
-              className={cn('flex gap-3 px-3 py-3 transition-colors hover:bg-ink-100', activeId === o._id && 'bg-primary-50 hover:bg-primary-50')}
+              className={cn('flex gap-3 px-3 py-3 transition-colors hover:bg-ink-100', activeId === o._id && 'bg-ink-50 hover:bg-ink-50')}
             >
               <div className="relative">
                 <Avatar src={other.avatar?.url} name={other.name} />
@@ -98,12 +98,12 @@ export default function NegotiationsPage() {
 
   return (
     <div className="mx-auto flex h-[calc(100dvh-4rem-4rem)] max-w-6xl md:h-[calc(100dvh-4rem)] md:px-4 md:py-6">
-      <div className="flex min-h-0 flex-1 overflow-hidden border-ink-200 bg-white md:rounded-2xl md:border md:shadow-card">
+      <div className="flex min-h-0 flex-1 overflow-hidden border-ink-200 bg-white md:rounded-lg md:border md:shadow-card">
         <aside aria-label="Conversations" className={cn('flex w-full min-h-0 flex-col border-r border-ink-200 md:w-80', id && 'hidden md:flex')}>
           <div className="flex items-center justify-between border-b border-ink-200 px-4 py-3">
             <h1 className="text-lg font-bold">Offers & chats</h1>
             {jobFilter && (
-              <Link to="/negotiations" className="text-xs font-semibold text-primary-700 hover:underline">
+              <Link to="/negotiations" className="text-xs font-semibold text-ink-950 underline decoration-primary-500 decoration-2 underline-offset-4 hover:decoration-ink-950">
                 Show all
               </Link>
             )}

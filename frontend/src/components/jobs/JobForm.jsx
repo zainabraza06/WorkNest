@@ -116,8 +116,8 @@ export function JobForm({ initial, onSubmit, submitting, serverError, submitLabe
       <ol className="grid grid-cols-4 gap-2" aria-label="Progress">
         {STEPS.map((label, i) => (
           <li key={label} aria-current={i === step ? 'step' : undefined}>
-            <div className={cn('h-1.5 rounded-full', i <= step ? 'bg-primary-600' : 'bg-ink-200')} />
-            <p className={cn('mt-1.5 flex items-center gap-1 text-xs font-medium', i === step ? 'text-primary-800' : 'text-ink-500')}>
+            <div className={cn('h-0.5 transition-colors', i <= step ? 'bg-primary-500' : 'bg-ink-200')} />
+            <p className={cn('mt-1.5 flex items-center gap-1 text-xs font-medium', i === step ? 'text-ink-900' : 'text-ink-500')}>
               {i < step && <Check className="size-3" aria-hidden />}
               <span className={cn(i !== step && 'hidden sm:inline')}>{label}</span>
               <span className="sr-only">{i < step ? ' (done)' : ''}</span>
@@ -132,7 +132,7 @@ export function JobForm({ initial, onSubmit, submitting, serverError, submitLabe
         <CardBody className="flex flex-col gap-5 p-5 sm:p-6">
           {step === 0 && (
             <>
-              <h2 className="text-xl font-semibold">What do you need done?</h2>
+              <h2 className="text-xl">What do you need done?</h2>
               <Input label="Job title" required autoFocus maxLength={120} placeholder="e.g. Fix leaking kitchen sink pipe" value={form.title} onChange={(e) => set({ title: e.target.value })} error={allErrors.title} />
               <Select label="Category" required placeholder="Select a category" options={CATEGORIES} value={form.category} onChange={(e) => set({ category: e.target.value })} error={allErrors.category} />
               <Textarea
@@ -152,7 +152,7 @@ export function JobForm({ initial, onSubmit, submitting, serverError, submitLabe
 
           {step === 1 && (
             <>
-              <h2 className="text-xl font-semibold">When and for how long?</h2>
+              <h2 className="text-xl">When and for how long?</h2>
               <RadioCards
                 legend="Hiring for"
                 name="durationType"
@@ -170,14 +170,14 @@ export function JobForm({ initial, onSubmit, submitting, serverError, submitLabe
 
           {step === 2 && (
             <>
-              <h2 className="text-xl font-semibold">Where is the work?</h2>
+              <h2 className="text-xl">Where is the work?</h2>
               <LocationFields value={form.place} onChange={(place) => set({ place })} errors={allErrors} addressLabel="Address" addressHint="Only shared with the worker you hire. Others see the city and distance." />
             </>
           )}
 
           {step === 3 && (
             <>
-              <h2 className="text-xl font-semibold">What's your budget?</h2>
+              <h2 className="text-xl">What's your budget?</h2>
               <p className="-mt-3 text-sm text-ink-600">
                 Total for {formatDuration(form.durationType, Number(form.durationCount) || 1)}. Workers can send counter-offers.
               </p>

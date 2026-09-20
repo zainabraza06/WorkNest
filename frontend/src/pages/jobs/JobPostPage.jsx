@@ -31,7 +31,7 @@ export default function JobPostPage() {
     return (
       <LoadingRegion className="mx-auto max-w-2xl space-y-4 px-4 py-8">
         <Skeleton className="h-8 w-1/2" />
-        <Skeleton className="h-96 w-full rounded-xl" />
+        <Skeleton className="h-96 w-full rounded-lg" />
       </LoadingRegion>
     );
   }

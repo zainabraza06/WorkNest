@@ -3,7 +3,7 @@ import { cn } from '@/lib/cn';
 const tones = {
   neutral: 'border-ink-200 bg-ink-50 text-ink-600',
   solid: 'border-ink-950 bg-ink-950 text-white',
-  primary: 'border-primary-200 bg-primary-50 text-primary-700',
+  primary: 'border-primary-200 bg-ink-50 text-primary-600',
   accent: 'border-primary-500 bg-primary-500 text-white',
   secondary: 'border-secondary-300 bg-secondary-50 text-secondary-800',
   success: 'border-success-600/25 bg-success-50 text-success-700',

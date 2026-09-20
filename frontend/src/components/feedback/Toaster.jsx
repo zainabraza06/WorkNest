@@ -6,7 +6,7 @@ import { cn } from '@/lib/cn';
 import { useToastStore } from './toastStore';
 
 const icons = { info: Bell, success: CheckCircle2, danger: XCircle };
-const accents = { info: 'text-primary-700', success: 'text-success-600', danger: 'text-danger-600' };
+const accents = { info: 'text-primary-600', success: 'text-success-600', danger: 'text-danger-600' };
 
 function ToastItem({ toast }) {
   const dismiss = useToastStore((s) => s.dismiss);
@@ -28,7 +28,7 @@ function ToastItem({ toast }) {
   );
 
   return (
-    <li className="pointer-events-auto flex w-full items-start gap-3 rounded-xl border border-ink-200 bg-white p-3.5 shadow-raised">
+    <li className="pointer-events-auto flex w-full items-start gap-3 rounded-lg border border-ink-200 bg-white p-3.5 shadow-raised">
       {toast.to ? (
         <Link to={toast.to} onClick={() => dismiss(toast.id)} className="flex min-w-0 flex-1 items-start gap-3">
           {body}

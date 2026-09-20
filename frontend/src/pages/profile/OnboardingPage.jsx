@@ -14,8 +14,8 @@ export default function OnboardingPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
-      <p className="text-sm font-semibold text-primary-700">Step 2 of 2</p>
-      <h1 className="mt-1 text-3xl font-bold">{isWorker ? 'Set up your worker profile' : 'Tell us where you are'}</h1>
+      <p className="text-[11px] font-semibold tracking-[0.16em] text-primary-600 uppercase">Step 2 of 2</p>
+      <h1 className="mt-2 text-3xl">{isWorker ? 'Set up your worker profile' : 'Tell us where you are'}</h1>
       <p className="mt-2 mb-6 text-ink-600">
         {isWorker
           ? 'A complete profile helps clients find and trust you. You can add photos and ID verification afterwards.'

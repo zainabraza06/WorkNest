@@ -72,7 +72,7 @@ export default function JobDetailPage() {
       <LoadingRegion label="Loading job" className="mx-auto max-w-4xl space-y-4 px-4 py-8">
         <Skeleton className="h-8 w-2/3" />
         <Skeleton className="h-4 w-1/3" />
-        <Skeleton className="h-64 w-full rounded-xl" />
+        <Skeleton className="h-64 w-full rounded-lg" />
       </LoadingRegion>
     );
   }
@@ -115,7 +115,7 @@ export default function JobDetailPage() {
                 {cat?.label} · posted {timeAgo(job.createdAt)}
               </span>
             </div>
-            <h1 className="text-2xl font-bold break-words sm:text-3xl">{job.title}</h1>
+            <h1 className="text-3xl break-words">{job.title}</h1>
           </div>
 
           <Card>
@@ -162,7 +162,7 @@ export default function JobDetailPage() {
               {isOwner ? (
                 <>
                   <p className="text-sm text-ink-600">
-                    <span className="font-display text-2xl font-bold text-ink-900">{job.offersCount}</span> offer{job.offersCount === 1 ? '' : 's'} received
+                    <span className="numeric font-display text-2xl font-extrabold text-ink-950">{job.offersCount}</span> offer{job.offersCount === 1 ? '' : 's'} received
                   </p>
                   {isOpen && (
                     <>

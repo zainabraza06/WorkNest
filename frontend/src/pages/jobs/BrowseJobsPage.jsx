@@ -51,8 +51,8 @@ export default function BrowseJobsPage() {
       <div className="mt-6 grid gap-6 lg:grid-cols-[236px_minmax(0,1fr)]">
         <FilterPanel activeCount={activeCount} onReset={reset}>
           {home && (
-            <label className="flex items-center gap-2 rounded-lg bg-primary-50 p-3 text-sm font-medium text-primary-800">
-              <input type="checkbox" className="size-4 accent-primary-700" checked={filters.near === 'mine'} onChange={(e) => update({ near: e.target.checked && 'mine', sort: e.target.checked ? 'nearest' : 'newest' })} />
+            <label className="flex items-center gap-2 rounded-lg bg-ink-50 p-3 text-sm font-medium text-ink-900">
+              <input type="checkbox" className="size-4 accent-primary-500" checked={filters.near === 'mine'} onChange={(e) => update({ near: e.target.checked && 'mine', sort: e.target.checked ? 'nearest' : 'newest' })} />
               Only within my service area ({profile.serviceRadiusKm} km)
             </label>
           )}
@@ -61,7 +61,7 @@ export default function BrowseJobsPage() {
           <Select label="City" placeholder="All cities" options={CITIES.map((c) => ({ value: c.value }))} value={filters.city ?? ''} onChange={(e) => update({ city: e.target.value })} />
           <Input label="Minimum budget" type="number" inputMode="numeric" min={0} step={500} leading="Rs" value={filters.minBudget ?? ''} onChange={(e) => update({ minBudget: e.target.value })} />
           <label className="flex items-center gap-2 text-sm">
-            <input type="checkbox" className="size-4 accent-primary-700" checked={filters.urgency === 'urgent'} onChange={(e) => update({ urgency: e.target.checked && 'urgent' })} />
+            <input type="checkbox" className="size-4 accent-primary-500" checked={filters.urgency === 'urgent'} onChange={(e) => update({ urgency: e.target.checked && 'urgent' })} />
             Urgent jobs only
           </label>
         </FilterPanel>

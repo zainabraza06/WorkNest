@@ -10,7 +10,7 @@ export function ChipSelect({ legend, options, value = [], onChange, max, error, 
 
   return (
     <fieldset>
-      {legend && <legend className="mb-2 text-sm font-medium text-ink-800">{legend}</legend>}
+      {legend && <legend className="mb-2 text-[11px] font-semibold tracking-[0.12em] text-ink-500 uppercase">{legend}</legend>}
       <div className="flex flex-wrap gap-2">
         {options.map(({ value: v, label, icon: Icon }) => {
           const selected = value.includes(v);
@@ -19,9 +19,9 @@ export function ChipSelect({ legend, options, value = [], onChange, max, error, 
             <label
               key={v}
               className={cn(
-                'inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition-colors select-none',
+                'inline-flex cursor-pointer items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-sm font-medium transition-colors select-none',
                 'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary-600',
-                selected ? 'border-primary-600 bg-primary-50 text-primary-800' : 'border-ink-300 bg-white text-ink-700 hover:border-ink-400',
+                selected ? 'border-ink-950 bg-ink-950 text-white' : 'border-ink-300 bg-white text-ink-600 hover:border-ink-950 hover:text-ink-950',
                 disabled && 'cursor-not-allowed opacity-50',
               )}
             >
@@ -52,14 +52,14 @@ export function RadioCards({ legend, options, value, onChange, name, columns = 3
           <label
             key={o.value}
             className={cn(
-              'flex cursor-pointer flex-col rounded-xl border-2 px-3 py-2.5 transition-colors',
+              'flex cursor-pointer flex-col rounded-md border px-3 py-2.5 transition-colors',
               'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary-600',
-              value === o.value ? 'border-primary-600 bg-primary-50' : 'border-ink-200 bg-white hover:border-ink-300',
+              value === o.value ? 'border-ink-950 bg-ink-950 text-white' : 'border-ink-300 bg-white hover:border-ink-950',
             )}
           >
             <input type="radio" name={name} value={o.value} checked={value === o.value} onChange={() => onChange(o.value)} className="sr-only" />
-            <span className="text-sm font-semibold text-ink-900">{o.label}</span>
-            {o.description && <span className="text-xs text-ink-600">{o.description}</span>}
+            <span className="text-sm font-bold">{o.label}</span>
+            {o.description && <span className="text-xs opacity-70">{o.description}</span>}
           </label>
         ))}
       </div>

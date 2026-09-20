@@ -26,7 +26,7 @@ export default function LoginPage() {
       footer={
         <>
           New to WorkNest?{' '}
-          <Link to="/register" className="font-semibold text-primary-700 hover:underline">
+          <Link to="/register" className="font-semibold text-ink-950 underline decoration-primary-500 decoration-2 underline-offset-4 hover:decoration-ink-950">
             Create an account
           </Link>
         </>

@@ -75,8 +75,8 @@ export const CITIES = [
 export const CITY_MAP = Object.fromEntries(CITIES.map((c) => [c.value, c]));
 
 export const JOB_STATUS_META = {
-  posted: { label: 'Open', tone: 'primary' },
-  negotiating: { label: 'Negotiating', tone: 'secondary' },
+  posted: { label: 'Open', tone: 'neutral' },
+  negotiating: { label: 'Negotiating', tone: 'solid' },
   confirmed: { label: 'Confirmed', tone: 'success' },
   in_progress: { label: 'In progress', tone: 'success' },
   completed: { label: 'Completed', tone: 'neutral' },

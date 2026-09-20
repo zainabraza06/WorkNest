@@ -23,12 +23,12 @@ export function TagInput({ label, value = [], onChange, placeholder, max = 20, h
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label htmlFor={id} className="text-sm font-medium text-ink-800">
+      <label htmlFor={id} className="text-[11px] font-semibold tracking-[0.12em] text-ink-500 uppercase">
         {label}
       </label>
-      <div className="flex min-h-11 flex-wrap items-center gap-1.5 rounded-lg border border-ink-300 bg-white px-2 py-1.5 focus-within:border-primary-600 focus-within:ring-2 focus-within:ring-primary-600/30">
+      <div className="flex min-h-10 flex-wrap items-center gap-1.5 rounded-md border border-ink-300 bg-white px-2 py-1.5 focus-within:border-ink-950 focus-within:ring-2 focus-within:ring-ink-950/10">
         {value.map((tag) => (
-          <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-ink-100 py-0.5 pr-1 pl-2.5 text-sm text-ink-800">
+          <span key={tag} className="inline-flex items-center gap-1 rounded-sm border border-ink-200 bg-ink-50 py-0.5 pr-1 pl-2 text-sm text-ink-700">
             {tag}
             <button type="button" onClick={() => onChange(value.filter((t) => t !== tag))} className="rounded-full p-0.5 hover:bg-ink-200" aria-label={`Remove ${tag}`}>
               <X className="size-3.5" />

@@ -128,9 +128,9 @@ export function WorkerProfileForm({ profile, onSaved, submitLabel = 'Save profil
           <LocationFields value={form.place} onChange={(place) => set({ place })} errors={errors} addressLabel="Area / neighbourhood" addressHint="Only your city and approximate distance are shown publicly." />
           <div>
             <label htmlFor="radius" className="text-sm font-medium text-ink-800">
-              Travel up to <span className="font-semibold text-primary-700">{form.serviceRadiusKm} km</span>
+              Travel up to <span className="font-semibold text-primary-600">{form.serviceRadiusKm} km</span>
             </label>
-            <input id="radius" type="range" min={1} max={100} value={form.serviceRadiusKm} onChange={(e) => set({ serviceRadiusKm: e.target.value })} className="mt-2 w-full accent-primary-700" />
+            <input id="radius" type="range" min={1} max={100} value={form.serviceRadiusKm} onChange={(e) => set({ serviceRadiusKm: e.target.value })} className="mt-2 w-full accent-primary-500" />
           </div>
         </CardBody>
       </Card>
@@ -140,7 +140,7 @@ export function WorkerProfileForm({ profile, onSaved, submitLabel = 'Save profil
           title="Availability"
           action={
             <label className="inline-flex cursor-pointer items-center gap-2 text-sm font-medium">
-              <input type="checkbox" checked={form.isAvailable} onChange={(e) => set({ isAvailable: e.target.checked })} className="size-4 accent-primary-700" />
+              <input type="checkbox" checked={form.isAvailable} onChange={(e) => set({ isAvailable: e.target.checked })} className="size-4 accent-primary-500" />
               Taking new work
             </label>
           }

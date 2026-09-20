@@ -2,7 +2,7 @@ import { ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/cn';
 
 export function trustTier(score = 0) {
-  if (score >= 85) return { label: 'Highly trusted', stroke: 'stroke-primary-500', text: 'text-primary-600', chip: 'border-primary-200 bg-primary-50 text-primary-700' };
+  if (score >= 85) return { label: 'Highly trusted', stroke: 'stroke-primary-500', text: 'text-primary-600', chip: 'border-primary-200 bg-ink-50 text-primary-600' };
   if (score >= 70) return { label: 'Trusted', stroke: 'stroke-ink-900', text: 'text-ink-900', chip: 'border-ink-200 bg-ink-50 text-ink-700' };
   if (score >= 50) return { label: 'Building trust', stroke: 'stroke-ink-400', text: 'text-ink-600', chip: 'border-ink-200 bg-white text-ink-600' };
   return { label: 'New', stroke: 'stroke-ink-300', text: 'text-ink-500', chip: 'border-dashed border-ink-300 bg-white text-ink-500' };

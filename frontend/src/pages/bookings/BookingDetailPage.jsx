@@ -26,7 +26,7 @@ function Stepper({ status }) {
     <ol className="grid grid-cols-4 gap-2" aria-label="Booking progress">
       {BOOKING_STEPS.map((s, i) => (
         <li key={s.status} aria-current={i === index ? 'step' : undefined} className="flex flex-col items-center gap-1.5 text-center">
-          <span className={cn('flex size-8 items-center justify-center rounded-full text-sm font-bold', i < index || status === 'completed' ? 'bg-primary-700 text-white' : i === index ? 'bg-primary-100 text-primary-800 ring-2 ring-primary-600' : 'bg-ink-200 text-ink-500')}>
+          <span className={cn('flex size-8 items-center justify-center rounded-full text-sm font-bold', i < index || status === 'completed' ? 'bg-primary-700 text-white' : i === index ? 'bg-primary-100 text-ink-900 ring-2 ring-primary-600' : 'bg-ink-200 text-ink-500')}>
             {i < index || status === 'completed' ? <Check className="size-4" aria-hidden /> : i + 1}
           </span>
           <span className={cn('text-xs font-medium', i <= index ? 'text-ink-800' : 'text-ink-500')}>{s.label}</span>
@@ -92,8 +92,8 @@ export default function BookingDetailPage() {
     return (
       <LoadingRegion label="Loading booking" className="mx-auto max-w-4xl space-y-4 px-4 py-8">
         <Skeleton className="h-8 w-1/2" />
-        <Skeleton className="h-16 w-full rounded-xl" />
-        <Skeleton className="h-64 w-full rounded-xl" />
+        <Skeleton className="h-16 w-full rounded-lg" />
+        <Skeleton className="h-64 w-full rounded-lg" />
       </LoadingRegion>
     );
   }
@@ -117,7 +117,7 @@ export default function BookingDetailPage() {
     <div className="mx-auto max-w-5xl px-4 py-6 md:py-8">
       <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <Link to="/bookings" className="text-sm font-medium text-primary-700 hover:underline">
+          <Link to="/bookings" className="text-sm font-medium text-ink-950 underline decoration-primary-500 decoration-2 underline-offset-4 hover:decoration-ink-950">
             ← All bookings
           </Link>
           <h1 className="mt-1 text-2xl font-bold break-words sm:text-3xl">{b.job?.title}</h1>
@@ -237,7 +237,7 @@ export default function BookingDetailPage() {
                 <div>
                   <p className="font-semibold">{other.name}</p>
                   {role === 'client' && (
-                    <Link to={`/workers/${other._id}`} className="text-xs text-primary-700 hover:underline">
+                    <Link to={`/workers/${other._id}`} className="text-xs text-ink-950 underline decoration-primary-500 decoration-2 underline-offset-4 hover:decoration-ink-950">
                       View profile
                     </Link>
                   )}
@@ -247,14 +247,14 @@ export default function BookingDetailPage() {
                 <ul className="flex flex-col gap-2 text-sm">
                   {other.phone && (
                     <li>
-                      <a href={`tel:${other.phone}`} className="inline-flex items-center gap-2 text-primary-700 hover:underline">
+                      <a href={`tel:${other.phone}`} className="inline-flex items-center gap-2 text-ink-950 underline decoration-primary-500 decoration-2 underline-offset-4 hover:decoration-ink-950">
                         <Phone className="size-4" aria-hidden /> {other.phone}
                       </a>
                     </li>
                   )}
                   {other.email && (
                     <li>
-                      <a href={`mailto:${other.email}`} className="inline-flex items-center gap-2 break-all text-primary-700 hover:underline">
+                      <a href={`mailto:${other.email}`} className="inline-flex items-center gap-2 break-all text-ink-950 underline decoration-primary-500 decoration-2 underline-offset-4 hover:decoration-ink-950">
                         <Mail className="size-4" aria-hidden /> {other.email}
                       </a>
                     </li>

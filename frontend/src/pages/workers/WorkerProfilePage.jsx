@@ -28,7 +28,7 @@ function ProfileSkeleton() {
           <Skeleton className="h-4 w-1/4" />
         </div>
       </Card>
-      <Skeleton className="h-40 w-full rounded-xl" />
+      <Skeleton className="h-40 w-full rounded-lg" />
     </LoadingRegion>
   );
 }
@@ -62,7 +62,7 @@ export default function WorkerProfilePage() {
         <CardBody className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:p-6">
           <Avatar src={w.user.avatar?.url} name={w.user.name} size="xl" />
           <div className="min-w-0 flex-1">
-            <h1 className="flex flex-wrap items-center gap-2 text-2xl font-bold sm:text-3xl">
+            <h1 className="flex flex-wrap items-center gap-2 text-3xl">
               {w.user.name}
               {w.idVerified && (
                 <Badge tone="primary">
