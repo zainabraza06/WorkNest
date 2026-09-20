@@ -39,8 +39,10 @@ USER appuser
 
 EXPOSE 8000
 
+# Must follow $PORT: hosts like Render inject their own (10000), and a hardcoded port
+# would mark a perfectly healthy container as unhealthy.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-  CMD python -c "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4).status == 200 else 1)"
+  CMD python -c "import os,urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:'+os.environ.get('PORT','8000')+'/health', timeout=4).status == 200 else 1)"
 
 # Hosts inject $PORT; default to 8000 for local compose
 CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
