@@ -2,17 +2,25 @@ import { useState } from 'react';
 import { cn } from '@/lib/cn';
 import { initials } from '@/lib/format';
 
-const sizes = { sm: 'size-8 text-xs', md: 'size-11 text-sm', lg: 'size-16 text-lg', xl: 'size-24 text-2xl' };
+const sizes = {
+  xs: 'size-7 text-[10px] rounded-sm',
+  sm: 'size-9 text-xs rounded-md',
+  md: 'size-11 text-sm rounded-md',
+  lg: 'size-14 text-base rounded-lg',
+  xl: 'size-20 text-xl rounded-lg',
+};
 
-export function Avatar({ src, name, size = 'md', className }) {
+/** Squared avatar — reads more editorial than a circle, and aligns with the card geometry. */
+export function Avatar({ src, name, size = 'md', round = false, className }) {
   const [failed, setFailed] = useState(false);
   const showImage = src && !failed;
 
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-100 font-semibold text-primary-800',
+        'inline-flex shrink-0 items-center justify-center overflow-hidden bg-ink-900 font-display font-bold text-white',
         sizes[size],
+        round && 'rounded-full',
         className,
       )}
     >
