@@ -223,6 +223,20 @@ Being explicit about this, since it is a student/portfolio project:
 
 ## Running it locally
 
+### With Docker (one command)
+
+```bash
+cp backend/.env.example backend/.env    # fill in MONGODB_URI and JWT_SECRET
+docker compose up --build
+# web http://localhost:8080 · api :5000 · ai :8000/docs
+```
+
+The AI image **bakes the models in** — no training at deploy, no model download at boot, and the
+build fails if the committed models don't load or fail their checksum. See
+**[DEPLOYMENT.md](DEPLOYMENT.md)** for how models are pinned, validated and hosted.
+
+### Without Docker
+
 **Prerequisites:** Node 20+, Python 3.11+, a MongoDB Atlas connection string (or a local `mongod`).
 
 ### 1. Backend
@@ -368,6 +382,8 @@ compound indexes for the common filter/sort paths; unique `(job, worker)` on off
 cd backend    && npm test      # 48 tests — auth, profiles, jobs, negotiation, escrow, reviews, AI, ranking loop
 cd ai-service && pytest -q     # 30 tests — semantic matching, trust, pricing, coverage, monotonicity, fallbacks
 cd frontend   && npm run build # type/JSX + bundling check
+
+cd ai-service && python scripts/validate_models.py   # the promotion gate CI enforces
 ```
 
 Backend tests run against an in-memory MongoDB (`mongodb-memory-server`, downloaded on first run)
@@ -377,9 +393,12 @@ with Stripe, Cloudinary and the AI client mocked — no external services, no te
 
 ## Deployment notes
 
-- **Backend** → Render / Railway. Set all env vars; the process validates them at boot and exits
-  with a readable error if anything is missing.
-- **AI service** → Hugging Face Spaces, Modal or Railway. CPU is plenty for the current heuristics.
+Full guide: **[DEPLOYMENT.md](DEPLOYMENT.md)**. In short:
+
+- **Backend** → Render / Railway / Fly (Dockerfile provided). Set all env vars; the process
+  validates them at boot and exits with a readable error if anything is missing.
+- **AI service** → any Docker host. 512 MB RAM is enough (measured: 152 MB steady, 351 MB peak).
+  Models and the embedding model ship inside the image, so cold starts don't download anything.
 - **Database** → MongoDB Atlas free tier. Create the indexes by letting Mongoose sync on first boot.
 - **Frontend** → any static host; set `VITE_API_URL` to the deployed backend origin.
 - Set `CLIENT_URL` to the deployed frontend origin (comma-separated for multiple) so CORS and
