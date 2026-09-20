@@ -4,7 +4,7 @@ Stateless FastAPI microservice. It receives JSON, returns predictions, and **nev
 MongoDB** — the Express backend owns all persistence.
 
 ```
-POST /match/workers   ranking + human-readable reasons   (heuristic)
+POST /match/workers   ranking + human-readable reasons   (local embeddings)
 POST /trust/score     0–100 Trust Score                  (trained model)
 POST /price/suggest   fair-price range in PKR            (trained model)
 GET  /health          which implementation is live + current model metrics
@@ -138,9 +138,42 @@ Two further design points:
 
 ### Matching — `POST /match/workers`
 
-Still a transparent heuristic: synonym-expanded lexical similarity blended with trust, rating,
-distance and price fit. Swap-in plan is documented at the top of `app/services/matching.py`
-(sentence-transformer embeddings + FAISS / Atlas Vector Search).
+Retrieve-then-rank, in two stages:
+
+1. **Semantic** — `BAAI/bge-small-en-v1.5` (384-dim, ~130 MB) runs locally through
+   [fastembed](https://github.com/qdrant/fastembed) on ONNX Runtime. No torch, **no LLM API, no
+   API key, no per-request cost.** Worker vectors are cached by content hash, so a repeat query
+   costs one embedding (~10 ms) rather than 120.
+2. **Re-rank** — that similarity is blended with Trust Score, rating, distance and price fit
+   (`WEIGHTS`), then passed through a **relevance gate**.
+
+#### Why an embedding model rather than keywords
+
+Clients describe symptoms; profiles list trades. Measured on nine seeded workers with queries
+that deliberately share **no words** with the profile they should match:
+
+| Query | Lexical | Semantic |
+| --- | --- | --- |
+| "the lights keep tripping when I turn on the heater" | ✗ plumber | ✓ electrician |
+| "somebody to look after my mother while I am at work" | ✗ plumber | ✓ carer |
+| "I want home made food prepared every evening" | ✗ plumber | ✓ cook |
+| **Top-1 accuracy (9 queries)** | **5/9** | **8/9** |
+
+The synonym table is still there and still used — as the **fallback** when the model can't load
+(offline, CI, or fastembed not installed). `model` in the response says which ran.
+
+#### The relevance gate
+
+Blending relevance with quality has a failure mode: for "the lights keep tripping", a nearby,
+well-rated plumber beat the correct electrician by 0.002 on Trust Score alone. Quality signals
+should order results *within* what's relevant, never promote the wrong trade — so a candidate
+scoring half the top result's relevance keeps 75% of its score, and one scoring zero keeps 50%.
+
+#### Still honest about
+
+`WEIGHTS` are hand-set. Calling that "learning-to-rank" would be a stretch: with real hire
+outcomes the coefficients would be fitted by logistic regression, and that is the one part of
+this pipeline genuinely waiting on data rather than effort.
 
 ---
 
@@ -174,7 +207,7 @@ otherwise that category silently falls back to the heuristic. The test
 
 ```bash
 pip install -r requirements-dev.txt
-pytest -q          # 28 tests
+pytest -q          # 30 tests
 ```
 
 They assert behaviour — ordering, bounds, full vocabulary coverage, the monotonicity

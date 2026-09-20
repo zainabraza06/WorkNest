@@ -54,6 +54,30 @@ def test_matches_everyday_phrasing_without_keyword_overlap():
     assert any("match" in r.lower() or "trust" in r.lower() for r in results[0]["reasons"])
 
 
+def test_understands_intent_with_no_shared_words():
+    """The reason the embedding model is here: none of these queries share a word with the
+    profile they should match. Skipped when the model is unavailable (CI, offline)."""
+    from app.services import embeddings
+
+    if not embeddings.is_available():
+        import pytest
+
+        pytest.skip("embedding model unavailable — lexical fallback in use")
+
+    assert match("the lights keep tripping when I switch on the heater")[0]["worker_id"] == "w_electrician"
+    assert match("the walls look dull and need a fresh coat")[0]["worker_id"] == "w_painter"
+
+
+def test_falls_back_to_lexical_without_the_model(monkeypatch):
+    from app.services import embeddings
+
+    monkeypatch.setattr(embeddings, "similarity", lambda *_a, **_k: None)
+    res = client.post("/match/workers", json={"query": "fix a leaking pipe", "candidates": [PLUMBER, ELECTRICIAN, PAINTER]})
+    assert res.status_code == 200
+    assert res.json()["model"] == "lexical-fallback-v1"
+    assert res.json()["results"][0]["worker_id"] == "w_plumber"
+
+
 def test_electrical_query_prefers_electrician():
     results = match("my room switch and wiring is not working")
     assert results[0]["worker_id"] == "w_electrician"

@@ -44,7 +44,7 @@ is the only thing that touches MongoDB; the AI service is stateless and never se
 | ------------ | ---------------------------------------------------------------------- | --------------------------------------------------------- | ------------------------------ |
 | `frontend/`  | React 19 (Vite), TailwindCSS v4, React Router, TanStack Query, Zustand  | UI, routing, client state                                  | Call the AI service directly   |
 | `backend/`   | Node 20+, Express 5, Mongoose, JWT, Socket.io, Stripe, Cloudinary       | Auth, business rules, **all** DB reads/writes, payments    | Import or run Python           |
-| `ai-service/`| Python 3.11+, FastAPI, scikit-learn, pandas                            | Ranking, scoring, price prediction — pure functions of JSON | Touch MongoDB or hold state    |
+| `ai-service/`| Python 3.11+, FastAPI, scikit-learn, fastembed (ONNX)                  | Ranking, scoring, price prediction — pure functions of JSON | Touch MongoDB or hold state    |
 
 **Graceful degradation:** if the AI service is unreachable, the backend falls back to MongoDB
 text search, a built-in placeholder Trust Score, and simply hides price guidance. A circuit
@@ -143,9 +143,19 @@ All three are exposed by the FastAPI service and consumed by Express.
 ### 1. Matching & ranking — `POST /match/workers`
 MongoDB shortlists up to 120 workers on the hard filters; the AI service scores that shortlist
 against the client's own words and returns an ordering plus human-readable reasons
-("Skills match what you described", "Only 4 km away"). The blend is
-`0.45·semantic + 0.18·trust + 0.15·rating + 0.12·distance + 0.10·price fit` — the
-learning-to-rank stage, currently with hand-set weights.
+("Skills match what you described", "Only 4 km away").
+
+Relevance comes from a **local sentence-embedding model** (`BAAI/bge-small-en-v1.5` via
+fastembed/ONNX) — **no LLM API, no API key, no per-request cost**, ~10 ms per cached query. That
+is what lets "the lights keep tripping when I turn on the heater" find an electrician with no
+shared keywords: **8/9 top-1 accuracy vs 5/9** for the keyword baseline it replaced. Without the
+model (offline/CI) it falls back to a synonym-expanded lexical scorer.
+
+Relevance is then blended with Trust Score, rating, distance and price fit
+(`0.45·semantic + 0.18·trust + 0.15·rating + 0.12·distance + 0.10·price`) and passed through a
+**relevance gate**, so a well-rated plumber can never outrank an electrician on an electrical
+job. The blend weights are hand-set — fitting them on real hire outcomes is the one genuinely
+data-blocked piece.
 
 ### 2. Trust Score — `POST /trust/score`
 A **trained HistGradientBoosting regressor with monotonic constraints** (MAE 2.79 on a 0–100
@@ -176,7 +186,9 @@ calibrated from the model's own residuals instead of a hard-coded percentage. Al
 
 ### 4. Negotiation assistant — *not built*
 The stretch goal (fine-tuned small LLM for counter-offer suggestions) was intentionally left out;
-the four items above are solid and the LLM was the riskiest, least essential piece.
+the three above are solid and the LLM was the riskiest, least essential piece. **It is also the
+only feature here that would need an LLM at all** — search uses embeddings, which are a different
+kind of model entirely.
 
 ---
 
@@ -189,7 +201,7 @@ Being explicit about this, since it is a student/portfolio project:
 | **Auth, profiles, jobs, negotiation, bookings, reviews, realtime chat** | **Real.** Full implementation against MongoDB, covered by tests. |
 | **Payments** | **Stripe test mode only.** `backend/src/config/env.js` *rejects any key that doesn't start with `sk_test_`*, and the frontend refuses a publishable key that isn't `pk_test_`. No real money can move. Use card `4242 4242 4242 4242`. |
 | **AI models** | **Trained for trust + pricing, heuristic for matching.** Every endpoint falls back to a documented heuristic if its model file is absent, and the `source` field in each response says which path answered. |
-| ↳ matching | **Heuristic.** Synonym-expanded lexical overlap standing in for sentence-transformer embeddings + FAISS/Atlas Vector Search. Swap-in plan at the top of `matching.py`. |
+| ↳ matching | **Real local embeddings** (bge-small via ONNX, no API). 8/9 top-1 on no-keyword-overlap queries vs 5/9 lexical. Blend weights still hand-set, not fitted. |
 | ↳ trust | **Trained** HistGradientBoosting, monotonic (R² 0.92, MAE 2.79 pts) — 7/8 worker events provably safe. |
 | ↳ pricing | **Trained** HistGradientBoosting on log(price), 7.5% MAE — 88–94% of the computable ceiling. |
 | ↳ **training data** | **Synthetic — this is the real caveat.** No booking history exists pre-launch, so prices are sampled around hand-assembled 2026 Pakistani wage anchors (`ai-service/data/rate_anchors.json` — **not** a wage survey) and trust targets come from a documented formula plus noise. The models are genuinely trained and evaluated, but their ceiling is the assumptions in the generators. Point the scripts at real bookings later — the feature contract is already identical. |
@@ -340,7 +352,7 @@ compound indexes for the common filter/sort paths; unique `(job, worker)` on off
 
 ```bash
 cd backend    && npm test      # 41 tests — auth, profiles, jobs, negotiation, escrow, reviews, AI integration
-cd ai-service && pytest -q     # 28 tests — matching, trust, pricing, vocabulary coverage, monotonicity, fallbacks
+cd ai-service && pytest -q     # 30 tests — semantic matching, trust, pricing, coverage, monotonicity, fallbacks
 cd frontend   && npm run build # type/JSX + bundling check
 ```
 

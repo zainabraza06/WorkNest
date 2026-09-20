@@ -10,4 +10,5 @@ router = APIRouter(prefix="/match", tags=["matching"], dependencies=[Depends(ver
 @router.post("/workers", response_model=MatchResponse)
 def match_workers(request: MatchRequest) -> MatchResponse:
     """Ranks the candidate workers the backend shortlisted against a natural-language query."""
-    return MatchResponse(results=matching.rank(request), model=matching.MODEL_NAME)
+    results, model = matching.rank(request)
+    return MatchResponse(results=results, model=model)

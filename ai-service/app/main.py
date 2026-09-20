@@ -14,6 +14,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
 from app.routers import matching, pricing, trust
+from app.services import embeddings
+from app.services import matching as matching_service
 from app.services import pricing as pricing_service
 from app.services import trust as trust_service
 from app.services.model_registry import backend_name, price_meta, price_model, trust_meta, trust_model
@@ -45,7 +47,7 @@ def health() -> dict:
         "service": "worknest-ai",
         "backends": {
             # Reported from the loaded artifacts, so "is the model actually serving?" is never a guess
-            "matching": settings.matching_backend,
+            "matching": matching_service.MODEL_NAME if embeddings.is_available() else matching_service.LEXICAL_NAME,
             "trust": backend_name(trust_model(), trust_service.MODEL_NAME, trust_service.FALLBACK_NAME),
             "pricing": backend_name(price_model(), pricing_service.MODEL_NAME, pricing_service.FALLBACK_NAME),
         },

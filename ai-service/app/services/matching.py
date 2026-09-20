@@ -1,19 +1,26 @@
 """Worker matching.
 
-DUMMY IMPLEMENTATION — hardcoded lexical similarity with a synonym map, followed by a
-weighted re-ranking over structured features (the "learning-to-rank" stage).
+Two stages, the standard retrieve-then-rank shape:
 
-Swap-in plan for the real version:
-  1. semantic_similarity() -> sentence-transformers embeddings (all-MiniLM-L6-v2) + cosine
-     similarity over a FAISS / MongoDB Atlas Vector Search index.
-  2. rerank() weights -> coefficients learned by logistic regression on hire outcomes.
-The request/response contract does not change.
+  1. SEMANTIC — a local sentence-embedding model (app/services/embeddings.py) scores the
+     client's own words against each worker's profile text. This is what lets "my geyser
+     isn't heating" find a plumber with no shared keywords. Falls back to the synonym-expanded
+     lexical overlap below when the model is unavailable.
+  2. RE-RANK — that similarity is blended with structured features (trust, rating, distance,
+     price fit) into one score, with the reasons returned alongside it.
+
+No LLM API involved: embeddings run locally on CPU. The weights in WEIGHTS are hand-set; with
+real hire outcomes they would be fitted by logistic regression, which is the only part of this
+still waiting on data.
 """
 
 import math
 import re
 
-MODEL_NAME = "dummy-lexical-v1"
+from app.services import embeddings
+
+MODEL_NAME = "semantic-bge-small-v1"
+LEXICAL_NAME = "lexical-fallback-v1"
 
 # Everyday phrasing → the skills/categories that actually do the work.
 SYNONYMS: dict[str, list[str]] = {
@@ -87,8 +94,8 @@ def expand(tokens: set[str]) -> set[str]:
     return out
 
 
-def semantic_similarity(query: str, candidate_text: str) -> float:
-    """Stand-in for embedding cosine similarity: synonym-expanded weighted overlap."""
+def lexical_similarity(query: str, candidate_text: str) -> float:
+    """Fallback scorer: synonym-expanded weighted overlap, used when embeddings are unavailable."""
     q = expand(tokenize(query))
     c = expand(tokenize(candidate_text))
     if not q or not c:
@@ -127,14 +134,38 @@ WEIGHTS = {
 }
 
 
-def rank(request) -> list[dict]:
-    """Blends semantic similarity with structured features into one 0–1 score."""
+def rank(request) -> tuple[list[dict], str]:
+    """Blends semantic similarity with structured features into one 0-1 score.
+
+    Returns (results, model_name) so the caller can report which path actually ran.
+    """
+    candidates = request.candidates
+    texts = [
+        " ".join([c.headline or "", c.bio or "", " ".join(c.skills), " ".join(c.categories)]).strip()
+        for c in candidates
+    ]
+
+    # Stage 1: semantic, with a lexical fallback
+    semantic_scores = None
+    model_used = LEXICAL_NAME
+    if request.query:
+        semantic_scores = embeddings.similarity(request.query, texts)
+        if semantic_scores is not None:
+            model_used = MODEL_NAME
+        else:
+            semantic_scores = [lexical_similarity(request.query, t) for t in texts]
+    else:
+        semantic_scores = [0.5] * len(candidates)  # nothing to match against
+
+    # Relevance gate: quality signals should order results *within* what is relevant, never
+    # promote the wrong trade. Without this a nearby, well-rated plumber outranks an
+    # electrician for an electrical job by a hair of Trust Score.
+    best_semantic = max(semantic_scores) if semantic_scores else 0.0
+    gate_active = bool(request.query) and best_semantic > 0.15
+
+    # Stage 2: re-rank against the structured signals
     results = []
-
-    for c in request.candidates:
-        text = " ".join([c.headline or "", c.bio or "", " ".join(c.skills), " ".join(c.categories)])
-        semantic = semantic_similarity(request.query, text) if request.query else 0.5
-
+    for c, semantic in zip(candidates, semantic_scores):
         if request.category and request.category in c.categories:
             semantic = min(1.0, semantic + 0.25)
 
@@ -150,6 +181,9 @@ def rank(request) -> list[dict]:
             + WEIGHTS["distance"] * distance
             + WEIGHTS["price"] * price
         )
+        if gate_active:
+            # Half the top result's relevance => 75% of the score; none of it => 50%
+            score *= 0.5 + 0.5 * min(1.0, semantic / best_semantic)
         if not c.is_available:
             score *= 0.75
         if c.id_verified:
@@ -173,10 +207,10 @@ def rank(request) -> list[dict]:
             {
                 "worker_id": c.worker_id,
                 "score": round(min(1.0, score), 4),
-                "semantic_score": round(semantic, 4),
+                "semantic_score": round(float(semantic), 4),
                 "reasons": reasons[:3],
             }
         )
 
     results.sort(key=lambda r: r["score"], reverse=True)
-    return results[: request.limit]
+    return results[: request.limit], model_used
