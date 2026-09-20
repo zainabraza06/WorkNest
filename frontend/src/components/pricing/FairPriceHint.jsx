@@ -25,7 +25,7 @@ export function FairPriceHint({ category, city, durationType = 'one_day', durati
 
   if (isPending) {
     return (
-      <div className={cn('rounded-xl border border-ink-200 bg-white p-4', className)}>
+      <div className={cn('rounded-lg border border-ink-200 bg-white p-4', className)}>
         <Skeleton className="h-3 w-24" />
         <Skeleton className="mt-2 h-6 w-40" />
         <Skeleton className="mt-2 h-3 w-full" />
@@ -37,13 +37,13 @@ export function FairPriceHint({ category, city, durationType = 'one_day', durati
 
   return (
     <aside
-      className={cn('rounded-xl border border-primary-200 bg-primary-50 p-4', className)}
+      className={cn('rounded-lg border border-ink-200 bg-ink-50 p-4', className)}
       aria-label="Suggested fair price"
     >
-      <p className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-primary-800 uppercase">
+      <p className="flex items-center gap-1.5 text-[11px] font-semibold tracking-[0.14em] text-primary-600 uppercase">
         <Scale className="size-3.5" aria-hidden /> Fair price guide
       </p>
-      <p className="mt-1.5 font-display text-xl font-bold text-ink-900">
+      <p className="numeric mt-1.5 font-display text-xl font-extrabold text-ink-950">
         {formatPKR(data.min)} – {formatPKR(data.max)}
       </p>
       {!compact && (
@@ -55,12 +55,12 @@ export function FairPriceHint({ category, city, durationType = 'one_day', durati
         <button
           type="button"
           onClick={() => onApply(data.min, data.max, data.median)}
-          className="mt-2.5 inline-flex items-center gap-1 rounded-lg bg-white px-2.5 py-1.5 text-sm font-semibold text-primary-800 shadow-sm hover:bg-primary-100"
+          className="mt-2.5 inline-flex items-center gap-1 rounded-md border border-ink-300 bg-white px-2.5 py-1 text-xs font-semibold text-ink-900 transition-colors hover:border-ink-950"
         >
           <TrendingUp className="size-4" aria-hidden /> {applyLabel}
         </button>
       )}
-      <p className="mt-2 text-[11px] text-primary-900/70">
+      <p className="mt-2 text-[11px] text-ink-400">
         Estimated from local rates for {city ?? 'Pakistan'}. You can still set any price you agree on.
       </p>
     </aside>

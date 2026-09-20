@@ -7,8 +7,8 @@ export function OfferRoundCard({ round, label, isMine, highlight = false, classN
   return (
     <div
       className={cn(
-        'w-full max-w-sm rounded-xl border p-3.5',
-        highlight ? 'border-primary-300 bg-primary-50' : 'border-ink-200 bg-white',
+        'w-full max-w-sm rounded-lg border p-3.5',
+        highlight ? 'border-ink-950 bg-white ring-1 ring-ink-950' : 'border-ink-200 bg-white',
         isMine ? 'ml-auto' : 'mr-auto',
         className,
       )}
@@ -16,7 +16,7 @@ export function OfferRoundCard({ round, label, isMine, highlight = false, classN
       <p className="flex items-center gap-1.5 text-xs font-semibold tracking-wide text-ink-500 uppercase">
         <Handshake className="size-3.5" aria-hidden /> {label}
       </p>
-      <p className="mt-1 font-display text-2xl font-bold text-ink-900">{formatPKR(round.amount)}</p>
+      <p className="numeric mt-1 font-display text-2xl font-extrabold text-ink-950">{formatPKR(round.amount)}</p>
       <dl className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-700">
         <div className="inline-flex items-center gap-1">
           <dt className="sr-only">Duration</dt>

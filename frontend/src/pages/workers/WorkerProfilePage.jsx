@@ -4,7 +4,7 @@ import { BadgeCheck, Briefcase, CalendarDays, MapPin, Repeat, UserX } from 'luci
 
 import { workersApi } from '@/api';
 import { Avatar } from '@/components/ui/Avatar';
-import { Badge } from '@/components/ui/Badge';
+import { Badge, Tag } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { LoadingRegion, Skeleton } from '@/components/ui/Skeleton';
@@ -100,17 +100,20 @@ export default function WorkerProfilePage() {
 
         <Card>
           <CardHeader title="Services & skills" />
-          <CardBody className="flex flex-wrap gap-2">
+          <CardBody className="flex flex-wrap gap-1.5">
             {w.categories.map((c) => (
-              <Badge key={c} tone="primary" className="px-3 py-1 text-sm">
+              <Badge key={c} tone="solid">
                 {CATEGORY_MAP[c]?.label ?? c}
               </Badge>
             ))}
-            {w.skills.map((s) => (
-              <Badge key={s} className="px-3 py-1 text-sm capitalize">
-                {s}
-              </Badge>
-            ))}
+            {/* A skill that just restates a category would be noise */}
+            {w.skills
+              .filter((s) => !w.categories.some((c) => (CATEGORY_MAP[c]?.label ?? c).toLowerCase() === s.toLowerCase()))
+              .map((s) => (
+                <Tag key={s} className="capitalize">
+                  {s}
+                </Tag>
+              ))}
           </CardBody>
         </Card>
 
@@ -224,7 +227,7 @@ export default function WorkerProfilePage() {
           <CardBody>
             <ul className="grid grid-cols-7 gap-1 text-center" aria-label="Working days">
               {DAYS.map((d, i) => (
-                <li key={d} className={`rounded-md py-2 text-xs font-semibold ${workDays.has(i) ? 'bg-primary-100 text-primary-800' : 'bg-ink-100 text-ink-400 line-through'}`}>
+                <li key={d} className={`rounded-sm py-2 text-xs font-bold ${workDays.has(i) ? 'bg-ink-950 text-white' : 'bg-ink-100 text-ink-300'}`}>
                   {d[0]}
                   <span className="sr-only">
                     {d} {workDays.has(i) ? 'available' : 'unavailable'}
@@ -233,7 +236,7 @@ export default function WorkerProfilePage() {
               ))}
             </ul>
             {w.availability?.[0] && (
-              <p className="mt-3 text-sm text-ink-600">
+              <p className="mt-3 text-xs text-ink-500">
                 Usually {w.availability[0].startTime} – {w.availability[0].endTime} · travels up to {w.serviceRadiusKm} km
               </p>
             )}

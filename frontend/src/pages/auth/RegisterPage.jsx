@@ -43,21 +43,21 @@ export default function RegisterPage() {
     >
       <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
         <fieldset>
-          <legend className="mb-2 text-sm font-medium text-ink-800">How will you use WorkNest?</legend>
+          <legend className="mb-2 text-[11px] font-semibold tracking-[0.12em] text-ink-500 uppercase">How will you use WorkNest?</legend>
           <div className="grid grid-cols-2 gap-3">
             {roles.map(({ value, title, body, icon: Icon }) => (
               <label
                 key={value}
                 className={cn(
-                  'relative flex cursor-pointer flex-col gap-1 rounded-xl border-2 p-3 transition-colors',
+                  'relative flex cursor-pointer flex-col gap-1 rounded-md border p-3 transition-colors',
                   'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-primary-600',
-                  form.role === value ? 'border-primary-600 bg-primary-50' : 'border-ink-200 hover:border-ink-300',
+                  form.role === value ? 'border-ink-950 bg-ink-950' : 'border-ink-300 hover:border-ink-950',
                 )}
               >
                 <input type="radio" name="role" value={value} checked={form.role === value} onChange={onChange} className="sr-only" />
-                <Icon className={cn('size-5', form.role === value ? 'text-primary-700' : 'text-ink-500')} aria-hidden />
-                <span className="text-sm font-semibold text-ink-900">{title}</span>
-                <span className="text-xs text-ink-600">{body}</span>
+                <Icon className={cn('size-4', form.role === value ? 'text-primary-500' : 'text-ink-400')} aria-hidden />
+                <span className={cn('text-sm font-bold', form.role === value ? 'text-white' : 'text-ink-950')}>{title}</span>
+                <span className={cn('text-xs', form.role === value ? 'text-ink-400' : 'text-ink-500')}>{body}</span>
               </label>
             ))}
           </div>

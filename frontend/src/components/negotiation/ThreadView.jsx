@@ -86,7 +86,7 @@ function Composer({ offerId, disabled }) {
           if (e.key === 'Enter' && !e.shiftKey) submit(e);
         }}
         placeholder="Write a message…"
-        className="max-h-32 min-h-11 flex-1 resize-none rounded-xl border border-ink-300 px-3 py-2.5 text-base focus:border-primary-600 focus:ring-2 focus:ring-primary-600/30 focus:outline-none sm:text-sm"
+        className="max-h-32 min-h-10 flex-1 resize-none rounded-md border border-ink-300 px-3 py-2.5 text-base focus:border-ink-950 focus:ring-2 focus:ring-ink-950/10 focus:outline-none sm:text-sm"
       />
       <Button type="submit" size="icon" loading={send.isPending} disabled={!text.trim()} aria-label="Send message">
         {!send.isPending && <Send className="size-5" />}
@@ -376,7 +376,7 @@ export function ThreadView({ offerId, onBack }) {
             const mine = m.sender === me._id;
             if (m.type === 'system') {
               return (
-                <li key={m._id} className="mx-auto flex max-w-md items-start gap-1.5 rounded-full bg-ink-100 px-3 py-1.5 text-center text-xs text-ink-600">
+                <li key={m._id} className="mx-auto flex max-w-md items-start gap-1.5 rounded-sm bg-ink-100 px-2.5 py-1 text-center text-xs text-ink-500">
                   <Info className="mt-px size-3.5 shrink-0" aria-hidden />
                   {m.text}
                 </li>
@@ -389,7 +389,7 @@ export function ThreadView({ offerId, onBack }) {
               return (
                 <li key={m._id} className="flex flex-col gap-1">
                   <OfferRoundCard round={entry.round} label={label} isMine={mine} highlight={m.roundId === latestRoundId && offer.status === 'pending'} />
-                  {m.text && <p className={cn('max-w-sm rounded-2xl px-3.5 py-2 text-sm', mine ? 'ml-auto bg-primary-700 text-white' : 'mr-auto bg-white text-ink-800 shadow-card')}>{m.text}</p>}
+                  {m.text && <p className={cn('max-w-sm rounded-2xl px-3.5 py-2 text-sm', mine ? 'ml-auto bg-ink-950 text-white' : 'mr-auto border border-ink-200 bg-white text-ink-700')}>{m.text}</p>}
                   <time className={cn('text-[11px] text-ink-400', mine ? 'text-right' : '')} dateTime={m.createdAt}>
                     {timeFmt.format(new Date(m.createdAt))}
                   </time>
@@ -398,7 +398,7 @@ export function ThreadView({ offerId, onBack }) {
             }
             return (
               <li key={m._id} className={cn('flex max-w-[80%] flex-col', mine ? 'ml-auto items-end' : 'mr-auto items-start')}>
-                <p className={cn('rounded-2xl px-3.5 py-2 text-sm break-words whitespace-pre-line', mine ? 'rounded-br-md bg-primary-700 text-white' : 'rounded-bl-md bg-white text-ink-800 shadow-card')}>
+                <p className={cn('rounded-2xl px-3.5 py-2 text-sm break-words whitespace-pre-line', mine ? 'rounded-br-xs bg-ink-950 text-white' : 'rounded-bl-xs border border-ink-200 bg-white text-ink-700')}>
                   <span className="sr-only">{mine ? 'You' : other.name}: </span>
                   {m.text}
                 </p>
