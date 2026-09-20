@@ -1,5 +1,6 @@
 import { WorkerProfile } from '../models/index.js';
 import { isAiEnabled, rankWorkers, toCandidate } from '../services/ai.service.js';
+import { recordImpression } from '../services/ranking.service.js';
 import { KM_TO_RADIANS, keywordRegexFilter, paginateAggregate } from '../utils/query.js';
 
 /** How many workers to shortlist from MongoDB before the AI service re-ranks them. */
@@ -161,11 +162,24 @@ async function keywordSearch(query) {
 export async function searchWorkers(req, res) {
   const query = req.valid.query;
 
+  let data = null;
   // "Smart" mode only makes sense with something to match against
   if (query.mode === 'smart' && query.q && isAiEnabled()) {
-    const smart = await smartSearch(query);
-    if (smart) return res.json({ success: true, data: smart });
+    data = await smartSearch(query);
   }
+  data ??= await keywordSearch(query);
 
-  res.json({ success: true, data: await keywordSearch(query) });
+  // Training data for the ranker: what was shown, in what order, on which features.
+  // Best-effort and awaited only so the id can be returned; failures are swallowed.
+  const impressionId = await recordImpression({
+    client: req.user?._id,
+    query: query.q,
+    mode: data.mode,
+    category: query.category?.[0],
+    city: query.city,
+    budgetMax: query.maxRate,
+    items: data.items,
+  });
+
+  res.json({ success: true, data: { ...data, impressionId } });
 }

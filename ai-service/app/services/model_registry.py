@@ -20,6 +20,8 @@ PRICE_MODEL = MODEL_DIR / "price_model.pkl"
 TRUST_MODEL = MODEL_DIR / "trust_model.pkl"
 PRICE_META = MODEL_DIR / "price_model_meta.json"
 TRUST_META = MODEL_DIR / "trust_model_meta.json"
+RANKER_MODEL = MODEL_DIR / "ranker.pkl"
+RANKER_META = MODEL_DIR / "ranker_meta.json"
 
 
 def _load(path: Path):
@@ -52,6 +54,17 @@ def price_model():
 @lru_cache(maxsize=1)
 def trust_model():
     return _load(TRUST_MODEL)
+
+
+@lru_cache(maxsize=1)
+def ranker_model():
+    """Fitted on real search outcomes. Absent until the app has been used enough to train it."""
+    return _load(RANKER_MODEL)
+
+
+@lru_cache(maxsize=1)
+def ranker_meta() -> dict:
+    return _load_meta(RANKER_META)
 
 
 @lru_cache(maxsize=1)

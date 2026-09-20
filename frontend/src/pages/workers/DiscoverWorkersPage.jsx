@@ -171,7 +171,7 @@ export default function DiscoverWorkersPage() {
               <ul className={cn('grid gap-4 sm:grid-cols-2 xl:grid-cols-3', query.isPlaceholderData && 'opacity-50')}>
                 {data.items.map((w) => (
                   <li key={w._id} className="min-w-0">
-                    <WorkerCard worker={w} />
+                    <WorkerCard worker={w} impressionId={data.impressionId} />
                   </li>
                 ))}
               </ul>

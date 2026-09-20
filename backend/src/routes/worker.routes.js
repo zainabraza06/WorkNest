@@ -4,7 +4,7 @@ import { z } from 'zod';
 import * as workers from '../controllers/worker.controller.js';
 import { searchWorkers } from '../controllers/workerSearch.controller.js';
 import { ROLES } from '../constants/index.js';
-import { requireAuth, requireRole } from '../middleware/auth.js';
+import { optionalAuth, requireAuth, requireRole } from '../middleware/auth.js';
 import { uploadDocument, uploadImages } from '../middleware/upload.js';
 import { validate } from '../middleware/validate.js';
 import { idParam, objectId } from '../validators/common.js';
@@ -54,7 +54,7 @@ router.patch(
 );
 
 // Public discovery: keyword + structured filters. Must stay above /:userId.
-router.get('/', validate({ query: workerSearchQuery }), searchWorkers);
+router.get('/', optionalAuth, validate({ query: workerSearchQuery }), searchWorkers);
 
 router.get('/:userId', validate({ params: idParam('userId') }), workers.getPublicProfile);
 

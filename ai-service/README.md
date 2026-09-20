@@ -169,11 +169,39 @@ well-rated plumber beat the correct electrician by 0.002 on Trust Score alone. Q
 should order results *within* what's relevant, never promote the wrong trade — so a candidate
 scoring half the top result's relevance keeps 75% of its score, and one scoring zero keeps 50%.
 
-#### Still honest about
+#### Learning-to-rank — the weights can now be learned
 
-`WEIGHTS` are hand-set. Calling that "learning-to-rank" would be a stretch: with real hire
-outcomes the coefficients would be fitted by logistic regression, and that is the one part of
-this pipeline genuinely waiting on data rather than effort.
+`WEIGHTS` ship as hand-set priors, but there is a full feedback loop behind them:
+
+| Step | Where |
+| --- | --- |
+| Every search logs what was shown, in what order, with the feature values **at that moment** | `backend` → `SearchImpression` |
+| Opening a profile from results labels a weak positive | `POST /api/ranking/events` (`open`) |
+| Clicking "Hire" labels a stronger one | `POST /api/ranking/events` (`hire_intent`) |
+| An accepted offer labels the strongest | attributed automatically on booking |
+| Export → train → serve | `npm run export:ranking` → `python scripts/train_ranker.py` |
+
+```bash
+cd backend    && npm run export:ranking     # -> ai-service/data/ranking_events.csv
+cd ai-service && python scripts/train_ranker.py
+```
+
+When `models/ranker.pkl` exists, `rank()` scores with the fitted logistic regression instead of
+the hand-set blend and reports `...+ltr-logreg-v1` in `model`. Until then the priors stand.
+
+**Two guards decide whether a fitted ranker is allowed to ship**, because a bad ranker is worse
+than an honest heuristic:
+
+1. **Volume** — under 200 rows / 50 positives it refuses outright.
+2. **Direction** — every feature is a "goodness" signal, so a meaningfully negative coefficient
+   means the data is confounded, whatever the AUC says.
+
+The second guard is not theoretical. Training on 160 simulated searches produced **ROC-AUC
+0.87** — and a **−1.23 weight on semantic relevance**, which would have ranked *unrelated*
+workers higher. With only nine seeded workers, the cheapest one is also the highest-rated, so
+"cheap" and "well-rated" are indistinguishable, and `distance`/`price_fit` were constant
+(they are only logged when a search actually uses location or a budget filter). The trainer
+printed exactly that diagnosis and refused to save. That refusal is the feature.
 
 ---
 

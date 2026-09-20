@@ -1,8 +1,9 @@
-import { useParams } from 'react-router';
+import { useEffect } from 'react';
+import { useParams, useSearchParams } from 'react-router';
 import { useQuery } from '@tanstack/react-query';
 import { BadgeCheck, Briefcase, CalendarDays, MapPin, Repeat, UserX } from 'lucide-react';
 
-import { workersApi } from '@/api';
+import { rankingApi, workersApi } from '@/api';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge, Tag } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -35,7 +36,14 @@ function ProfileSkeleton() {
 
 export default function WorkerProfilePage() {
   const { userId } = useParams();
+  const [params] = useSearchParams();
+  const impressionId = params.get('from');
   const viewer = useAuthStore((s) => s.user);
+
+  // Arriving from a search result is the weak positive label the ranker learns from
+  useEffect(() => {
+    if (impressionId) rankingApi.logEvent({ impressionId, workerId: userId, type: 'open' });
+  }, [impressionId, userId]);
   const { data: w, isPending, isError, error, refetch } = useQuery({
     queryKey: ['worker', userId],
     queryFn: () => workersApi.get(userId),
@@ -182,7 +190,12 @@ export default function WorkerProfilePage() {
                 ))}
             </dl>
             {!isSelf && viewer?.role === 'client' && (
-              <Button to={`/jobs/new?invite=${w.user._id}&category=${w.categories[0]}`} size="lg" className="mt-4 w-full">
+              <Button
+                to={`/jobs/new?invite=${w.user._id}&category=${w.categories[0]}`}
+                size="lg"
+                className="mt-4 w-full"
+                onClick={() => impressionId && rankingApi.logEvent({ impressionId, workerId: w.user._id, type: 'hire_intent' })}
+              >
                 Hire {w.user.name.split(' ')[0]}
               </Button>
             )}

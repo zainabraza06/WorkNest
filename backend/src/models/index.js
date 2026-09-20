@@ -7,3 +7,4 @@ export { Booking } from './Booking.js';
 export { Payment } from './Payment.js';
 export { Review } from './Review.js';
 export { Message } from './Message.js';
+export { SearchImpression } from './SearchImpression.js';

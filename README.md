@@ -154,8 +154,18 @@ model (offline/CI) it falls back to a synonym-expanded lexical scorer.
 Relevance is then blended with Trust Score, rating, distance and price fit
 (`0.45·semantic + 0.18·trust + 0.15·rating + 0.12·distance + 0.10·price`) and passed through a
 **relevance gate**, so a well-rated plumber can never outrank an electrician on an electrical
-job. The blend weights are hand-set — fitting them on real hire outcomes is the one genuinely
-data-blocked piece.
+job.
+
+Those blend weights are **hand-set priors with a working feedback loop behind them**. Every
+search logs what was shown and on which feature values; opening a profile, clicking "Hire" and
+an accepted offer are progressively stronger labels; `npm run export:ranking` plus
+`train_ranker.py` fit a logistic regression on the result. Once trained, the service ranks with
+the learned weights and says so in `model`.
+
+It ships with two guards — a volume floor, and a **direction check** that refuses any ranker
+whose weights contradict what the features mean. That guard already earned its place: a run on
+160 simulated searches scored ROC-AUC 0.87 while putting a *negative* weight on relevance, and
+was correctly rejected. See `ai-service/README.md` for why.
 
 ### 2. Trust Score — `POST /trust/score`
 A **trained HistGradientBoosting regressor with monotonic constraints** (MAE 2.79 on a 0–100
@@ -201,10 +211,11 @@ Being explicit about this, since it is a student/portfolio project:
 | **Auth, profiles, jobs, negotiation, bookings, reviews, realtime chat** | **Real.** Full implementation against MongoDB, covered by tests. |
 | **Payments** | **Stripe test mode only.** `backend/src/config/env.js` *rejects any key that doesn't start with `sk_test_`*, and the frontend refuses a publishable key that isn't `pk_test_`. No real money can move. Use card `4242 4242 4242 4242`. |
 | **AI models** | **Trained for trust + pricing, heuristic for matching.** Every endpoint falls back to a documented heuristic if its model file is absent, and the `source` field in each response says which path answered. |
-| ↳ matching | **Real local embeddings** (bge-small via ONNX, no API). 8/9 top-1 on no-keyword-overlap queries vs 5/9 lexical. Blend weights still hand-set, not fitted. |
+| ↳ matching | **Real local embeddings** (bge-small via ONNX, no API). 8/9 top-1 vs 5/9 lexical. Blend weights are hand-set priors; the learning-to-rank loop that replaces them is built and gated, awaiting real usage. |
 | ↳ trust | **Trained** HistGradientBoosting, monotonic (R² 0.92, MAE 2.79 pts) — 7/8 worker events provably safe. |
 | ↳ pricing | **Trained** HistGradientBoosting on log(price), 7.5% MAE — 88–94% of the computable ceiling. |
-| ↳ **training data** | **Synthetic — this is the real caveat.** No booking history exists pre-launch, so prices are sampled around hand-assembled 2026 Pakistani wage anchors (`ai-service/data/rate_anchors.json` — **not** a wage survey) and trust targets come from a documented formula plus noise. The models are genuinely trained and evaluated, but their ceiling is the assumptions in the generators. Point the scripts at real bookings later — the feature contract is already identical. |
+| ↳ ranking | **Trained on real behaviour** once the app is used — nothing synthetic. Logged impressions → clicks/hires → logistic regression. |
+| ↳ **training data (price & trust)** | **Synthetic — this is the real caveat.** No booking history exists pre-launch, so prices are sampled around hand-assembled 2026 Pakistani wage anchors (`ai-service/data/rate_anchors.json` — **not** a wage survey) and trust targets come from a documented formula plus noise. The models are genuinely trained and evaluated, but their ceiling is the assumptions in the generators. Point the scripts at real bookings later — the feature contract is already identical. |
 | **ID verification** | Documents really are uploaded and stored privately, but approval is a manual admin endpoint — no automated document checks. |
 | **Cloudinary** | Real, but optional: upload endpoints return a clear 503 if credentials are absent, so the rest of the app runs without them. |
 
@@ -326,6 +337,7 @@ All responses are `{ success, data }` or `{ success: false, message, details? }`
 | `POST` | `/api/bookings/:id/reviews` | Review after completion |
 | `GET` | `/api/users/:userId/reviews` | Public reviews |
 | `GET` | `/api/price/suggest` | Fair-price guidance |
+| `POST` | `/api/ranking/events` | Labels a search result (open / hire intent) for the ranker |
 | `POST` | `/api/payments/webhook` | Stripe (raw body) |
 
 **Socket.io events** — client → server: `thread:join`, `thread:leave`, `thread:typing`;
@@ -339,7 +351,9 @@ server → client: `offer:new`, `offer:updated`, `message:new`, `thread:activity
 `User` (auth + role) · `WorkerProfile` (skills, rates, geo, availability, portfolio, ID verification,
 stats, trustScore) · `ClientProfile` · `Job` (budget, duration, geo, status, suggestedPrice) ·
 `Offer` (the negotiation thread — `rounds[]` of structured proposals) · `Booking` (agreed terms,
-status timeline) · `Payment` (escrow state) · `Review` (two-sided) · `Message` (text / offer / system).
+status timeline) · `Payment` (escrow state) · `Review` (two-sided) · `Message` (text / offer / system) ·
+`SearchImpression` (ranker training data: results shown, their features at that moment, and what
+the client did next — TTL 180 days).
 
 Indexes: `2dsphere` on worker, client and job locations; weighted text indexes on worker
 (`skills` ×5, `headline` ×3, `bio`) and job (`title` ×5, `skills` ×4, `description`);
@@ -351,7 +365,7 @@ compound indexes for the common filter/sort paths; unique `(job, worker)` on off
 ## Tests
 
 ```bash
-cd backend    && npm test      # 41 tests — auth, profiles, jobs, negotiation, escrow, reviews, AI integration
+cd backend    && npm test      # 48 tests — auth, profiles, jobs, negotiation, escrow, reviews, AI, ranking loop
 cd ai-service && pytest -q     # 30 tests — semantic matching, trust, pricing, coverage, monotonicity, fallbacks
 cd frontend   && npm run build # type/JSX + bundling check
 ```

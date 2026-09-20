@@ -13,7 +13,8 @@
     "start": "node --env-file-if-exists=.env src/server.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "seed": "node --env-file-if-exists=.env src/scripts/seed.js"
+    "seed": "node --env-file-if-exists=.env src/scripts/seed.js",
+    "export:ranking": "node --env-file-if-exists=.env src/scripts/exportRankingData.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",

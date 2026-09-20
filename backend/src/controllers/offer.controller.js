@@ -5,6 +5,7 @@ import { BOOKING_STATUS, JOB_STATUS, OFFER_STATUS, ROLES } from '../constants/in
 import { emitToOffer, emitToUser } from '../socket/index.js';
 import { ApiError } from '../utils/ApiError.js';
 import { computeEndDate } from '../utils/dates.js';
+import { recordHire } from '../services/ranking.service.js';
 
 const OPEN_JOB = [JOB_STATUS.POSTED, JOB_STATUS.NEGOTIATING];
 const POPULATE = [
@@ -250,6 +251,9 @@ export async function acceptOffer(req, res) {
   });
   job.booking = booking._id;
   await job.save();
+
+  // Label any recent search that showed this worker to this client
+  await recordHire({ clientId: offer.client, workerId: offer.worker });
 
   // Close every other live offer on this job and let those workers know
   const losers = await Offer.find({ job: job._id, _id: { $ne: offer._id }, status: OFFER_STATUS.PENDING }).select('_id worker');

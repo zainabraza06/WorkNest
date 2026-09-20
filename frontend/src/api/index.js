@@ -45,6 +45,12 @@ export const clientsApi = {
   update: (body) => unwrap(api.patch('/clients/me', body)),
 };
 
+export const rankingApi = {
+  // Labels a search result so the ranker can be trained on real outcomes.
+  // Deliberately fire-and-forget: analytics must never surface an error to the user.
+  logEvent: (body) => api.post('/ranking/events', body).catch(() => {}),
+};
+
 export const priceApi = {
   // AI fair-price guidance for a job or a worker's rate
   suggest: (params) => unwrap(api.get('/price/suggest', { params: clean(params) })),

@@ -18,6 +18,7 @@ import math
 import re
 
 from app.services import embeddings
+from app.services.model_registry import ranker_meta, ranker_model
 
 MODEL_NAME = "semantic-bge-small-v1"
 LEXICAL_NAME = "lexical-fallback-v1"
@@ -125,6 +126,7 @@ def _distance_fit(distance_km: float | None) -> float:
     return max(0.0, 1 - distance_km / 50)
 
 
+# Hand-set priors, used until there are enough real outcomes to fit the ranker.
 WEIGHTS = {
     "semantic": 0.45,
     "trust": 0.18,
@@ -132,6 +134,21 @@ WEIGHTS = {
     "distance": 0.12,
     "price": 0.10,
 }
+
+RANKER_NAME = "ltr-logreg-v1"
+
+
+def _learned_scores(rows: list[list[float]]) -> list[float] | None:
+    """Probability of a click/hire from the ranker fitted on logged outcomes."""
+    model = ranker_model()
+    if model is None or not rows:
+        return None
+    try:
+        import numpy as np
+
+        return [float(p) for p in model.predict_proba(np.asarray(rows, dtype=float))[:, 1]]
+    except Exception:  # noqa: BLE001 - a bad ranker must never break search
+        return None
 
 
 def rank(request) -> tuple[list[dict], str]:
@@ -163,9 +180,25 @@ def rank(request) -> tuple[list[dict], str]:
     best_semantic = max(semantic_scores) if semantic_scores else 0.0
     gate_active = bool(request.query) and best_semantic > 0.15
 
-    # Stage 2: re-rank against the structured signals
+    # Stage 2: re-rank. Feature order must match scripts/train_ranker.py FEATURES.
+    feature_rows = [
+        [
+            semantic,
+            c.trust_score / 100,
+            (c.avg_rating - 1) / 4 if c.review_count else 0.55,
+            _distance_fit(c.distance_km),
+            _price_fit(c.daily_rate, request.budget_max),
+            1.0 if c.id_verified else 0.0,
+            1.0 if c.is_available else 0.0,
+        ]
+        for c, semantic in zip(candidates, semantic_scores)
+    ]
+    learned = _learned_scores(feature_rows)
+    if learned is not None:
+        model_used = f"{model_used}+{RANKER_NAME}"
+
     results = []
-    for c, semantic in zip(candidates, semantic_scores):
+    for i, (c, semantic) in enumerate(zip(candidates, semantic_scores)):
         if request.category and request.category in c.categories:
             semantic = min(1.0, semantic + 0.25)
 
@@ -174,13 +207,17 @@ def rank(request) -> tuple[list[dict], str]:
         distance = _distance_fit(c.distance_km)
         price = _price_fit(c.daily_rate, request.budget_max)
 
-        score = (
-            WEIGHTS["semantic"] * semantic
-            + WEIGHTS["trust"] * trust
-            + WEIGHTS["rating"] * rating
-            + WEIGHTS["distance"] * distance
-            + WEIGHTS["price"] * price
-        )
+        if learned is not None:
+            # Weights fitted on what clients actually clicked and booked
+            score = learned[i]
+        else:
+            score = (
+                WEIGHTS["semantic"] * semantic
+                + WEIGHTS["trust"] * trust
+                + WEIGHTS["rating"] * rating
+                + WEIGHTS["distance"] * distance
+                + WEIGHTS["price"] * price
+            )
         if gate_active:
             # Half the top result's relevance => 75% of the score; none of it => 50%
             score *= 0.5 + 0.5 * min(1.0, semantic / best_semantic)

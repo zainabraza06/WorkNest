@@ -9,7 +9,7 @@ import { TrustBadge } from '@/components/ui/TrustScore';
 import { CATEGORY_MAP } from '@/lib/constants';
 import { formatPKR } from '@/lib/format';
 
-export function WorkerCard({ worker }) {
+export function WorkerCard({ worker, impressionId }) {
   const {
     user, headline, categories = [], skills = [], rates, city, distanceKm,
     stats, trustScore, idVerified, isAvailable, experienceYears, matchReasons,
@@ -26,7 +26,10 @@ export function WorkerCard({ worker }) {
 
         <div className="min-w-0 flex-1">
           <h3 className="flex min-w-0 items-center gap-1 font-display text-base font-bold text-ink-950">
-            <Link to={`/workers/${user._id}`} className="truncate after:absolute after:inset-0 focus:outline-none">
+            <Link
+              to={impressionId ? `/workers/${user._id}?from=${impressionId}` : `/workers/${user._id}`}
+              className="truncate after:absolute after:inset-0 focus:outline-none"
+            >
               {user.name}
             </Link>
             {idVerified && <BadgeCheck className="size-3.5 shrink-0 text-primary-500" aria-label="ID verified" />}
