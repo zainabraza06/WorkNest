@@ -13,60 +13,58 @@ export function JobCard({ job, showStatus = false, to }) {
   const status = JOB_STATUS_META[job.status];
 
   return (
-    <Card as="article" className="relative flex flex-col gap-3 p-4 transition hover:border-primary-300 hover:shadow-raised">
-      <div className="flex items-start gap-3">
-        {Icon && (
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary-50 text-primary-700">
-            <Icon className="size-5" aria-hidden />
-          </span>
-        )}
-        <div className="min-w-0 flex-1">
-          <h3 className="text-base font-semibold">
-            <Link to={to ?? `/jobs/${job._id}`} className="line-clamp-2 after:absolute after:inset-0 focus:outline-none">
-              {job.title}
-            </Link>
-          </h3>
-          <p className="text-sm text-ink-600">
-            {cat?.label} · posted {timeAgo(job.createdAt)}
-          </p>
+    <Card as="article" interactive className="relative flex h-full min-w-0 flex-col p-4">
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2 text-[11px] font-semibold tracking-[0.12em] text-ink-400 uppercase">
+          {Icon && <Icon className="size-3.5 shrink-0 text-primary-500" aria-hidden />}
+          <span className="truncate">{cat?.label}</span>
         </div>
-        <div className="flex flex-col items-end gap-1">
-          {showStatus && status && <Badge tone={status.tone}>{status.label}</Badge>}
+        <div className="flex shrink-0 items-center gap-1.5">
           {job.urgency === 'urgent' && (
-            <Badge tone="danger">
-              <Zap className="size-3" aria-hidden /> Urgent
+            <Badge tone="accent">
+              <Zap className="size-2.5" aria-hidden /> Urgent
             </Badge>
           )}
+          {showStatus && status && <Badge tone={status.tone}>{status.label}</Badge>}
         </div>
       </div>
 
-      <p className="line-clamp-2 text-sm text-ink-700">{job.description}</p>
+      <h3 className="mt-2 min-w-0 font-display text-base font-bold text-ink-950">
+        <Link to={to ?? `/jobs/${job._id}`} className="line-clamp-2 after:absolute after:inset-0 focus:outline-none">
+          {job.title}
+        </Link>
+      </h3>
 
-      <dl className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-ink-600">
-        <div className="inline-flex items-center gap-1">
+      <p className="mt-1.5 line-clamp-2 min-w-0 text-sm text-ink-500">{job.description}</p>
+
+      <dl className="mt-3 flex min-w-0 flex-wrap gap-x-4 gap-y-1 text-xs text-ink-500">
+        <div className="inline-flex min-w-0 items-center gap-1">
           <dt className="sr-only">Duration</dt>
-          <Clock className="size-4" aria-hidden />
-          <dd>{formatDuration(job.durationType, job.durationCount)}</dd>
+          <Clock className="size-3 shrink-0" aria-hidden />
+          <dd className="truncate">{formatDuration(job.durationType, job.durationCount)}</dd>
         </div>
-        <div className="inline-flex items-center gap-1">
+        <div className="inline-flex min-w-0 items-center gap-1">
           <dt className="sr-only">Starts</dt>
-          <CalendarDays className="size-4" aria-hidden />
-          <dd>{formatDate(job.startDate)}</dd>
+          <CalendarDays className="size-3 shrink-0" aria-hidden />
+          <dd className="truncate">{formatDate(job.startDate)}</dd>
         </div>
-        <div className="inline-flex items-center gap-1">
+        <div className="inline-flex min-w-0 items-center gap-1">
           <dt className="sr-only">Location</dt>
-          <MapPin className="size-4" aria-hidden />
-          <dd>{job.distanceKm !== undefined ? `${job.distanceKm} km · ${job.city}` : job.city}</dd>
+          <MapPin className="size-3 shrink-0" aria-hidden />
+          <dd className="truncate">{job.distanceKm !== undefined ? `${job.distanceKm} km · ${job.city}` : job.city}</dd>
         </div>
       </dl>
 
-      <div className="flex items-center justify-between border-t border-ink-100 pt-3">
-        <p className="font-display text-lg font-bold text-ink-900">
-          <span className="sr-only">Budget: </span>
-          {formatBudget(job.budget)}
-        </p>
-        <p className="text-xs text-ink-500">
-          {job.offersCount ?? 0} offer{job.offersCount === 1 ? '' : 's'}
+      <div className="mt-auto flex min-w-0 items-end justify-between gap-3 border-t border-ink-200 pt-3 [&:not(:nth-child(4))]:mt-4">
+        <div className="min-w-0">
+          <p className="numeric truncate font-display text-lg font-extrabold text-ink-950">
+            <span className="sr-only">Budget: </span>
+            {formatBudget(job.budget)}
+          </p>
+          <p className="text-[11px] font-semibold tracking-wide text-ink-400 uppercase">Budget</p>
+        </div>
+        <p className="numeric shrink-0 text-xs text-ink-400">
+          {job.offersCount ?? 0} offer{job.offersCount === 1 ? '' : 's'} · {timeAgo(job.createdAt)}
         </p>
       </div>
     </Card>
@@ -75,17 +73,16 @@ export function JobCard({ job, showStatus = false, to }) {
 
 export function JobCardSkeleton() {
   return (
-    <Card className="space-y-3 p-4">
-      <div className="flex gap-3">
-        <Skeleton className="size-10 rounded-lg" />
-        <div className="flex-1 space-y-2">
-          <Skeleton className="h-4 w-3/4" />
-          <Skeleton className="h-3 w-1/3" />
-        </div>
+    <Card className="flex h-full min-w-0 flex-col p-4">
+      <Skeleton className="h-3 w-24" />
+      <Skeleton className="mt-3 h-4 w-3/4" />
+      <Skeleton className="mt-2 h-3 w-full" />
+      <Skeleton className="mt-1.5 h-3 w-5/6" />
+      <Skeleton className="mt-4 h-3 w-2/3" />
+      <div className="mt-6 flex items-end justify-between border-t border-ink-200 pt-3">
+        <Skeleton className="h-5 w-28" />
+        <Skeleton className="h-3 w-20" />
       </div>
-      <Skeleton className="h-3 w-full" />
-      <Skeleton className="h-3 w-5/6" />
-      <Skeleton className="h-6 w-32" />
     </Card>
   );
 }

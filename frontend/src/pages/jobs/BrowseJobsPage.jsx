@@ -42,12 +42,13 @@ export default function BrowseJobsPage() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
-      <h1 className="text-2xl font-bold sm:text-3xl">Find jobs</h1>
-      <p className="mt-1 mb-4 text-ink-600">Open jobs from clients near you. Send an offer to start negotiating.</p>
+      <p className="text-[11px] font-semibold tracking-[0.16em] text-primary-600 uppercase">Open work</p>
+      <h1 className="mt-2 text-3xl lg:text-4xl">Find jobs</h1>
+      <p className="mt-2 mb-6 text-ink-500">Open jobs from clients near you. Send an offer to start negotiating.</p>
 
       <SearchBar value={filters.q ?? ''} onSearch={(q) => update({ q, ...(q && { sort: 'relevance' }) })} placeholder="Search jobs, e.g. wiring, house cleaning" label="Search jobs" />
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[260px_1fr]">
+      <div className="mt-6 grid gap-6 lg:grid-cols-[236px_minmax(0,1fr)]">
         <FilterPanel activeCount={activeCount} onReset={reset}>
           {home && (
             <label className="flex items-center gap-2 rounded-lg bg-primary-50 p-3 text-sm font-medium text-primary-800">
@@ -92,7 +93,7 @@ export default function BrowseJobsPage() {
             <>
               <ul className={`grid gap-4 md:grid-cols-2 ${query.isPlaceholderData ? 'opacity-60' : ''}`}>
                 {data.items.map((job) => (
-                  <li key={job._id} className="flex [&>*]:flex-1">
+                  <li key={job._id} className="min-w-0">
                     <JobCard job={job} />
                   </li>
                 ))}

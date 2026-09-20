@@ -36,8 +36,9 @@ export default function BookingsPage() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-6 md:py-8">
-      <h1 className="text-2xl font-bold sm:text-3xl">Bookings</h1>
-      <p className="mt-1 mb-5 text-ink-600">Confirmed work, payments held in escrow, and past jobs.</p>
+      <p className="text-[11px] font-semibold tracking-[0.16em] text-primary-600 uppercase">Work</p>
+      <h1 className="mt-2 text-3xl lg:text-4xl">Bookings</h1>
+      <p className="mt-2 mb-6 text-ink-500">Confirmed work, payments held in escrow, and past jobs.</p>
 
       <div role="tablist" aria-label="Booking status" className="-mx-4 mb-5 flex gap-1 overflow-x-auto border-b border-ink-200 px-4">
         {TABS.map((t) => (
@@ -50,7 +51,7 @@ export default function BookingsPage() {
               setTab(t.key);
               setPage(1);
             }}
-            className={cn('-mb-px border-b-2 px-4 py-2.5 text-sm font-semibold whitespace-nowrap', tab === t.key ? 'border-primary-700 text-primary-800' : 'border-transparent text-ink-500 hover:text-ink-800')}
+            className={cn('-mb-px border-b-2 px-3 py-2.5 text-sm font-semibold whitespace-nowrap', tab === t.key ? 'border-primary-500 text-ink-950' : 'border-transparent text-ink-400 hover:text-ink-900')}
           >
             {t.label}
           </button>
@@ -82,7 +83,7 @@ export default function BookingsPage() {
                 const needsMe = (me.role === 'client' && ['pending_payment', 'in_progress'].includes(b.status)) || (me.role === 'worker' && b.status === 'confirmed');
                 return (
                   <li key={b._id}>
-                    <Card className="relative flex items-center gap-4 p-4 transition hover:border-primary-300">
+                    <Card interactive className="relative flex min-w-0 items-center gap-4 p-4">
                       <Avatar src={other?.avatar?.url} name={other?.name} />
                       <div className="min-w-0 flex-1">
                         <p className="truncate font-semibold">

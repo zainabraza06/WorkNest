@@ -35,8 +35,9 @@ export default function ClientDashboardPage() {
     <div className="mx-auto max-w-5xl px-4 py-6 md:py-8">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold sm:text-3xl">Hi, {user.name.split(' ')[0]}</h1>
-          <p className="mt-1 text-ink-600">Manage your jobs and the workers you've hired.</p>
+          <p className="text-[11px] font-semibold tracking-[0.16em] text-primary-600 uppercase">Dashboard</p>
+          <h1 className="mt-2 text-3xl lg:text-4xl">Hi, {user.name.split(' ')[0]}</h1>
+          <p className="mt-2 text-ink-500">Manage your jobs and the workers you've hired.</p>
         </div>
         <Button to="/jobs/new" size="lg">
           <Plus className="size-4" aria-hidden /> Post a job
@@ -55,8 +56,8 @@ export default function ClientDashboardPage() {
               setPage(1);
             }}
             className={cn(
-              '-mb-px border-b-2 px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors',
-              tab === t.key ? 'border-primary-700 text-primary-800' : 'border-transparent text-ink-500 hover:text-ink-800',
+              '-mb-px border-b-2 px-3 py-2.5 text-sm font-semibold whitespace-nowrap transition-colors',
+              tab === t.key ? 'border-primary-500 text-ink-950' : 'border-transparent text-ink-400 hover:text-ink-900',
             )}
           >
             {t.label}
@@ -84,7 +85,7 @@ export default function ClientDashboardPage() {
           <>
             <ul className={`grid gap-4 md:grid-cols-2 ${query.isPlaceholderData ? 'opacity-60' : ''}`}>
               {query.data.items.map((job) => (
-                <li key={job._id} className="flex [&>*]:flex-1">
+                <li key={job._id} className="min-w-0">
                   <JobCard job={job} showStatus />
                 </li>
               ))}
