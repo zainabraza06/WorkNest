@@ -13,8 +13,8 @@ import { LoadingRegion } from '@/components/ui/Skeleton';
 import { EmptyState, ErrorState } from '@/components/ui/States';
 import { WorkerCard, WorkerCardSkeleton } from '@/components/workers/WorkerCard';
 import { useUrlFilters } from '@/hooks/useUrlFilters';
-import { cn } from '@/lib/cn';
 import { CATEGORIES, CITIES } from '@/lib/constants';
+import { cn } from '@/lib/cn';
 
 const SORTS = [
   { value: 'trust', label: 'Trust Score' },
@@ -56,22 +56,27 @@ export default function DiscoverWorkersPage() {
   const sortOptions = hasGeo ? SORTS : SORTS.filter((s) => s.value !== 'nearest');
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 md:py-8">
-      <h1 className="text-2xl font-bold sm:text-3xl">Find workers</h1>
-      <p className="mt-1 mb-4 text-ink-600">Describe the job in your own words — we'll match the right skills.</p>
+    <div className="mx-auto max-w-6xl px-4 py-8 md:py-10">
+      <header className="max-w-2xl">
+        <p className="text-[11px] font-semibold tracking-[0.16em] text-primary-600 uppercase">Discovery</p>
+        <h1 className="mt-2 text-3xl lg:text-4xl">Find workers</h1>
+        <p className="mt-2 text-ink-500">Describe the job in plain words — matching reads intent, not just keywords.</p>
+      </header>
 
-      <SearchBar
-        value={filters.q ?? ''}
-        onSearch={(q) => update({ q, mode: q ? filters.mode ?? 'smart' : undefined, sort: q ? 'relevance' : filters.sort === 'relevance' ? 'trust' : filters.sort })}
-        placeholder="e.g. need someone to fix a leaking pipe today"
-        label="Search workers"
-      />
+      <div className="mt-6">
+        <SearchBar
+          value={filters.q ?? ''}
+          onSearch={(q) => update({ q, mode: q ? (filters.mode ?? 'smart') : undefined, sort: q ? 'relevance' : filters.sort === 'relevance' ? 'trust' : filters.sort })}
+          placeholder="e.g. need someone to fix a leaking pipe today"
+          label="Search workers"
+        />
+      </div>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[260px_1fr]">
+      <div className="mt-8 grid gap-8 lg:grid-cols-[236px_minmax(0,1fr)]">
         <FilterPanel activeCount={activeCount} onReset={reset}>
           <Select label="Service" placeholder="All services" options={CATEGORIES} value={filters.category ?? ''} onChange={(e) => update({ category: e.target.value })} />
           <Select label="City" placeholder="All cities" options={CITIES.map((c) => ({ value: c.value }))} value={filters.city ?? ''} onChange={(e) => update({ city: e.target.value })} />
-          <Input label="Max daily rate" type="number" inputMode="numeric" min={0} step={500} leading="Rs" value={filters.maxRate ?? ''} onChange={(e) => update({ maxRate: e.target.value })} />
+          <Input label="Max daily rate" type="number" inputMode="numeric" min={0} step={500} leading="Rs" placeholder="Any" value={filters.maxRate ?? ''} onChange={(e) => update({ maxRate: e.target.value })} />
           <Select
             label="Minimum Trust Score"
             placeholder="Any"
@@ -83,14 +88,14 @@ export default function DiscoverWorkersPage() {
             value={filters.minTrust ?? ''}
             onChange={(e) => update({ minTrust: e.target.value })}
           />
-          <fieldset className="flex flex-col gap-2">
-            <legend className="mb-1 text-sm font-medium text-ink-800">Show only</legend>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" className="size-4 accent-primary-700" checked={filters.verified === 'true'} onChange={(e) => update({ verified: e.target.checked && 'true' })} />
+          <fieldset className="flex flex-col gap-2.5">
+            <legend className="mb-1 text-[11px] font-semibold tracking-[0.12em] text-ink-500 uppercase">Show only</legend>
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-ink-700">
+              <input type="checkbox" className="size-3.5 rounded-xs accent-primary-500" checked={filters.verified === 'true'} onChange={(e) => update({ verified: e.target.checked && 'true' })} />
               ID-verified workers
             </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" className="size-4 accent-primary-700" checked={filters.available === 'true'} onChange={(e) => update({ available: e.target.checked && 'true' })} />
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-ink-700">
+              <input type="checkbox" className="size-3.5 rounded-xs accent-primary-500" checked={filters.available === 'true'} onChange={(e) => update({ available: e.target.checked && 'true' })} />
               Available now
             </label>
           </fieldset>
@@ -105,37 +110,45 @@ export default function DiscoverWorkersPage() {
         </FilterPanel>
 
         <section aria-label="Results" className="min-w-0">
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <p className="text-sm text-ink-600" aria-live="polite">
-              {data ? `${data.total} worker${data.total === 1 ? '' : 's'} found` : ' '}
-              {smartApplied && <span className="ml-1 text-primary-700">· ranked by best match</span>}
-            </p>
-            <div className="flex flex-wrap items-center gap-2">
-              {hasGeo ? (
-                <Button variant="ghost" size="sm" onClick={() => update({ lat: '', lng: '', radiusKm: '', sort: filters.sort === 'nearest' ? 'trust' : filters.sort })}>
-                  Clear location
-                </Button>
+          <div className="mb-5 flex min-w-0 flex-wrap items-center justify-between gap-3 border-b border-ink-200 pb-4">
+            <p className="text-sm text-ink-500" aria-live="polite">
+              {data ? (
+                <>
+                  <span className="numeric font-bold text-ink-950">{data.total}</span> worker{data.total === 1 ? '' : 's'}
+                  {smartApplied && <span className="ml-1.5 text-primary-600">· ranked by best match</span>}
+                </>
               ) : (
-                <Button variant="outline" size="sm" onClick={nearMe} loading={locating}>
-                  <LocateFixed className="size-4" aria-hidden /> Near me
-                </Button>
+                ' '
               )}
+            </p>
+
+            <div className="flex flex-wrap items-center gap-2">
               {filters.q && (
                 <button
                   type="button"
                   onClick={() => update({ mode: smartOn ? 'keyword' : 'smart' })}
                   aria-pressed={smartOn}
                   className={cn(
-                    'inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-sm font-semibold transition-colors',
-                    smartOn ? 'border-primary-600 bg-primary-50 text-primary-800' : 'border-ink-300 bg-white text-ink-600 hover:bg-ink-100',
+                    'inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-semibold transition-colors',
+                    smartOn ? 'border-ink-950 bg-ink-950 text-white' : 'border-ink-300 bg-white text-ink-600 hover:border-ink-950 hover:text-ink-950',
                   )}
                 >
-                  <Sparkles className="size-4" aria-hidden /> Smart match
+                  <Sparkles className="size-3.5" aria-hidden /> Smart match
                 </button>
+              )}
+              {hasGeo ? (
+                <Button variant="ghost" size="sm" onClick={() => update({ lat: '', lng: '', radiusKm: '', sort: filters.sort === 'nearest' ? 'trust' : filters.sort })}>
+                  Clear location
+                </Button>
+              ) : (
+                <Button variant="outline" size="sm" onClick={nearMe} loading={locating}>
+                  <LocateFixed className="size-3.5" aria-hidden /> Near me
+                </Button>
               )}
               {!smartApplied && <SortSelect value={filters.sort} onChange={(sort) => update({ sort })} options={sortOptions} />}
             </div>
           </div>
+
           {geoError && <p className="mb-3 text-sm text-danger-700">{geoError}</p>}
 
           {query.isPending ? (
@@ -155,14 +168,16 @@ export default function DiscoverWorkersPage() {
             />
           ) : (
             <>
-              <ul className={`grid gap-4 sm:grid-cols-2 xl:grid-cols-3 ${query.isPlaceholderData ? 'opacity-60' : ''}`}>
+              <ul className={cn('grid gap-4 sm:grid-cols-2 xl:grid-cols-3', query.isPlaceholderData && 'opacity-50')}>
                 {data.items.map((w) => (
-                  <li key={w._id} className="flex">
+                  <li key={w._id} className="min-w-0">
                     <WorkerCard worker={w} />
                   </li>
                 ))}
               </ul>
-              <Pagination page={data.page} totalPages={data.totalPages} onChange={(page) => update({ page })} />
+              <div className="mt-8">
+                <Pagination page={data.page} totalPages={data.totalPages} onChange={(page) => update({ page })} />
+              </div>
             </>
           )}
         </section>
