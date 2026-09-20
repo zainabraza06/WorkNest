@@ -113,6 +113,44 @@ VITE_STRIPE_PUBLISHABLE_KEY=pk_test_…
 
 **ai-service** — `ALLOWED_ORIGINS` (the backend's origin) and optionally `SERVICE_API_KEY`.
 
+### AI service on Hugging Face Spaces
+
+Spaces is the best free option for this container: 2 vCPU / 16 GB RAM, versus 512 MB on Render's
+free tier. The image already satisfies its two requirements — it runs as uid 1000 and needs no
+writable filesystem outside `/tmp`.
+
+1. **Create the Space** — huggingface.co → New Space → **SDK: Docker** (blank template),
+   hardware *CPU basic (free)*. Visibility public, so your backend can reach it.
+
+2. **Push `ai-service/` as the Space root.** Spaces expects `Dockerfile` and `README.md` at the
+   top level, which is what the subtree push produces:
+
+   ```bash
+   git remote add hf https://USER:HF_TOKEN@huggingface.co/spaces/USER/worknest-ai
+   git subtree push --prefix ai-service hf main
+   ```
+   Use a **write** token from huggingface.co/settings/tokens. Re-run the same command to deploy
+   later changes.
+
+3. **Configuration is already committed.** The YAML front matter in `ai-service/README.md`
+   (`sdk: docker`, `app_port: 8000`) tells Spaces how to run and route to the container.
+
+4. **Add a variable** in Space → Settings → Variables:
+   `ALLOWED_ORIGINS = https://your-backend.onrender.com`
+
+5. **First build takes ~10 minutes** (installing scipy/onnxruntime and baking in the embedding
+   model). Watch the Logs tab. The build asserts the models load and checksum-match, so a
+   failure there is a real problem, not a flake.
+
+6. **Point the backend at it** — on Render set
+   `AI_SERVICE_URL=https://USER-worknest-ai.hf.space` and redeploy.
+
+Verify: `curl https://USER-worknest-ai.hf.space/health` should report
+`{"matching":"semantic-bge-small-v1","trust":"gb-worknest-v2-monotonic","pricing":"gb-worknest-v2"}`.
+
+**Caveat:** free Spaces pause after ~48 hours of inactivity and need a restart (a visit to the
+Space page wakes them). Fine for a portfolio; wake it before a demo.
+
 ### Order
 
 backend → copy its URL into the frontend build → deploy frontend → copy that URL into the

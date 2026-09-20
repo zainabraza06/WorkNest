@@ -1,3 +1,14 @@
+---
+title: WorkNest AI Service
+emoji: 🔧
+colorFrom: gray
+colorTo: orange
+sdk: docker
+app_port: 8000
+pinned: false
+short_description: Semantic matching, Trust Score and fair-price models for WorkNest
+---
+
 # WorkNest AI Service
 
 Stateless FastAPI microservice. It receives JSON, returns predictions, and **never touches

@@ -32,6 +32,11 @@ assert price_model() is not None, 'price model failed to load or failed checksum
 assert trust_model() is not None, 'trust model failed to load or failed checksum'; \
 print('models verified:', versions())"
 
+# Hugging Face Spaces runs containers as uid 1000 and the filesystem is read-only apart from
+# /tmp. Creating that user here means the same image runs unprivileged everywhere.
+RUN useradd -m -u 1000 appuser     && chown -R appuser:appuser /app /opt/models
+USER appuser
+
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
