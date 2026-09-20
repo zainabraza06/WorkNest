@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "models": {
+    "price_model.pkl": {
+      "version": "v2-histgb-log",
+      "sha256": "613fab374e45e01d5794915c89deb7ff20d4ee2e3295dfa9851284f600131874",
+      "size_bytes": 508081,
+      "trained_at": "2026-09-20",
+      "git_sha": "612a422",
+      "metrics": {
+        "mae": 1640.1300793471232,
+        "r2": 0.9824884485563296,
+        "n_rows": 4752
+      }
+    },
+    "trust_model.pkl": {
+      "version": "v2-histgb-monotonic",
+      "sha256": "e5adafb5aec0043afa9e4b5217da386f70a206147ac6457a2a1a87ec4579981c",
+      "size_bytes": 406872,
+      "trained_at": "2026-09-20",
+      "git_sha": "612a422",
+      "metrics": {
+        "mae": 2.7870858424426084,
+        "r2": 0.9151460064264964,
+        "events_provably_safe": "7/8",
+        "n_rows": 6000
+      }
+    }
+  }
+}

@@ -26,9 +26,12 @@ venv/
 .pytest_cache/
 *.egg-info/
 
-# ML build artifacts — regenerate with ai-service/scripts (see ai-service/README.md).
-# Kept out of git on purpose: they are outputs, not source.
-ai-service/models/*.pkl
+# The price and trust models ship with the code: under 1 MB each, deterministic, and pinned by
+# models/manifest.json (version + sha256 + git sha). That makes a deploy "start the server"
+# rather than "retrain and hope", and rollback a git revert.
+# Everything below is either large, or derived from user data.
+ai-service/models/ranker.pkl
+ai-service/models/ranker_meta.json
 ai-service/models/*.joblib
 ai-service/models/*.gguf
 ai-service/data/*.csv

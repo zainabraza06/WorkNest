@@ -18,7 +18,7 @@ from app.services import embeddings
 from app.services import matching as matching_service
 from app.services import pricing as pricing_service
 from app.services import trust as trust_service
-from app.services.model_registry import backend_name, price_meta, price_model, trust_meta, trust_model
+from app.services.model_registry import backend_name, price_meta, price_model, trust_meta, trust_model, versions
 
 settings = get_settings()
 
@@ -51,6 +51,7 @@ def health() -> dict:
             "trust": backend_name(trust_model(), trust_service.MODEL_NAME, trust_service.FALLBACK_NAME),
             "pricing": backend_name(price_model(), pricing_service.MODEL_NAME, pricing_service.FALLBACK_NAME),
         },
+        "models": versions(),
         "metrics": {
             "pricing": {k: price_meta().get(k) for k in ("mae", "r2", "n_rows") if price_meta()},
             "trust": {k: trust_meta().get(k) for k in ("mae", "r2", "n_rows") if trust_meta()},

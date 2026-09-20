@@ -1,0 +1,8 @@
+node_modules/
+tests/
+coverage/
+.env
+.env.*
+!.env.example
+*.md
+vitest.config.js

@@ -1,0 +1,50 @@
+# WorkNest — the whole stack in one command.
+#
+#   docker compose up --build        →  web http://localhost:8080  ·  api :5000  ·  ai :8000
+#
+# Requires backend/.env (MONGODB_URI, JWT_SECRET, Stripe/Cloudinary keys). MongoDB itself is
+# Atlas, not a container: the app uses geospatial + text indexes and Atlas is where it is
+# deployed, so running against it locally keeps dev and prod honest.
+
+services:
+  ai-service:
+    build:
+      context: ./ai-service
+    environment:
+      # Only the backend talks to this service, never the browser
+      ALLOWED_ORIGINS: http://backend:5000
+      PORT: 8000
+    ports:
+      - '8000:8000' # exposed for /docs and debugging; not required by the app
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+    env_file:
+      - ./backend/.env
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      # Container DNS, not localhost — inside the network the service is reachable by name
+      AI_SERVICE_URL: http://ai-service:8000
+      CLIENT_URL: http://localhost:8080
+    ports:
+      - '5000:5000'
+    depends_on:
+      ai-service:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Baked in at build time — the browser resolves this, so it is the host's address
+        VITE_API_URL: http://localhost:5000
+        VITE_STRIPE_PUBLISHABLE_KEY: ${VITE_STRIPE_PUBLISHABLE_KEY:-}
+    ports:
+      - '8080:80'
+    depends_on:
+      - backend
+    restart: unless-stopped
