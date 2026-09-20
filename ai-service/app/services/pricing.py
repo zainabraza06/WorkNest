@@ -13,7 +13,7 @@ response shape is identical either way — only `source` changes, so callers can
 assembled by hand, not a wage survey. Documented in the README, not hidden.
 """
 
-from app.services.model_registry import price_model
+from app.services.model_registry import price_meta, price_model
 from app.taxonomy import (
     BASE_DAILY_PKR,
     CATEGORIES,
@@ -23,10 +23,11 @@ from app.taxonomy import (
     URGENCY_MULTIPLIER,
 )
 
-MODEL_NAME = "rf-worknest-v1"
+MODEL_NAME = "gb-worknest-v2"
 FALLBACK_NAME = "rulebased-v1"
 
-SPREAD = 0.18  # +/- band around the median
+# Used only by the fallback; the model path reads its band from the trained metadata
+SPREAD = 0.18
 DURATION_LABEL = {"one_day": "day", "weekly": "week", "monthly": "month"}
 
 
@@ -67,7 +68,10 @@ def _model_per_unit(req) -> float | None:
                 }
             ]
         )
-        return float(model.predict(row)[0])
+        # Trained on log(price) — errors on prices are proportional, not absolute
+        import math
+
+        return float(math.exp(model.predict(row)[0]))
     except Exception:  # noqa: BLE001 - never let a prediction failure break the endpoint
         return None
 
@@ -82,6 +86,11 @@ def suggest_price(req) -> dict:
 
     median = per_unit * req.duration_count
 
+    # An 80% interval measured from the model's own residuals beats a guessed percentage
+    band = price_meta().get("band") or {}
+    low_mult = band.get("low", 1 - SPREAD) if source == MODEL_NAME else 1 - SPREAD
+    high_mult = band.get("high", 1 + SPREAD) if source == MODEL_NAME else 1 + SPREAD
+
     city_known = req.city in CITIES and req.city != "Other"
     category_known = req.category in BASE_DAILY_PKR
     confidence = 0.5 + (0.2 if city_known else 0) + (0.2 if category_known else 0)
@@ -92,9 +101,9 @@ def suggest_price(req) -> dict:
     urgency_note = f" ({req.urgency} timing)" if req.urgency != "normal" else ""
 
     return {
-        "min": _rounded(median * (1 - SPREAD)),
+        "min": _rounded(median * low_mult),
         "median": _rounded(median),
-        "max": _rounded(median * (1 + SPREAD)),
+        "max": _rounded(median * high_mult),
         "currency": "PKR",
         "per_unit": _rounded(per_unit),
         "confidence": round(confidence, 2),

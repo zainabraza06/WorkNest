@@ -13,10 +13,10 @@ model file is unavailable. Identical response shape; only `source` changes.
 came from a documented formula plus noise. See scripts/generate_trust_data.py and the README.
 """
 
+from app.features import TRUST_MODEL_FEATURES, derive_trust_features
 from app.services.model_registry import trust_meta, trust_model
-from app.taxonomy import TRUST_FEATURES
 
-MODEL_NAME = "gb-worknest-v1"
+MODEL_NAME = "gb-worknest-v2-monotonic"
 FALLBACK_NAME = "weighted-v1"
 
 
@@ -71,23 +71,20 @@ def _model_score(f) -> float | None:
     try:
         import pandas as pd
 
-        row = {
-            "completed_jobs": f.completed_jobs,
-            "total_jobs": f.total_jobs,
-            "cancelled_jobs": f.cancelled_jobs,
-            "avg_rating": f.avg_rating,
-            "review_count": f.review_count,
-            "repeat_hires": f.repeat_hires,
-            "disputes": f.disputes,
-            # The model was trained with an explicit "we have no response data" flag rather
-            # than a magic number, because a brand-new worker has never replied to anything.
-            "avg_response_minutes": f.avg_response_minutes if f.avg_response_minutes is not None else 0,
-            "response_known": 0 if f.avg_response_minutes is None else 1,
-            "account_age_days": f.account_age_days,
-            "id_verified": int(f.id_verified),
-            "portfolio_count": f.portfolio_count,
-        }
-        return float(model.predict(pd.DataFrame([row])[TRUST_FEATURES])[0])
+        row = derive_trust_features(
+            completed_jobs=f.completed_jobs,
+            total_jobs=f.total_jobs,
+            cancelled_jobs=f.cancelled_jobs,
+            avg_rating=f.avg_rating,
+            review_count=f.review_count,
+            repeat_hires=f.repeat_hires,
+            disputes=f.disputes,
+            avg_response_minutes=f.avg_response_minutes,
+            account_age_days=f.account_age_days,
+            id_verified=f.id_verified,
+            portfolio_count=f.portfolio_count,
+        )
+        return float(model.predict(pd.DataFrame([row])[TRUST_MODEL_FEATURES])[0])
     except Exception:  # noqa: BLE001
         return None
 

@@ -1,38 +1,104 @@
 {
-  "mae": 2.589459711918306,
-  "r2": 0.9273133540350759,
+  "model": "HistGradientBoostingRegressor(monotonic)",
+  "mae": 2.7870858424426084,
+  "r2": 0.9151460064264964,
   "new_accounts": {
     "n": 227,
-    "mae": 2.38,
+    "mae": 2.41,
     "mean_predicted": 53.2
   },
   "feature_importances": {
-    "id_verified": 0.2581,
-    "repeat_hires": 0.2445,
-    "avg_rating": 0.1757,
-    "completed_jobs": 0.1246,
-    "disputes": 0.0534,
-    "portfolio_count": 0.0402,
-    "cancelled_jobs": 0.0369,
-    "account_age_days": 0.0365,
-    "avg_response_minutes": 0.0171,
-    "review_count": 0.0103,
-    "total_jobs": 0.0026,
-    "response_known": 0.0
+    "id_verified": 0.5109,
+    "rating_norm": 0.2621,
+    "repeat_hires": 0.2281,
+    "dispute_rate": 0.1369,
+    "account_age_days": 0.0934,
+    "portfolio_count": 0.0722,
+    "response_minutes": 0.0465,
+    "cancelled_jobs": 0.0441,
+    "completion_rate": 0.0425,
+    "completed_jobs": 0.0374,
+    "review_count": 0.0135,
+    "response_known": 0.0032
   },
+  "integrity_audit": {
+    "completes_a_job": {
+      "violations": 0,
+      "of": 500,
+      "mean_change": 0.98,
+      "safe": true
+    },
+    "cancels_a_job": {
+      "violations": 24,
+      "of": 500,
+      "mean_change": -1.06,
+      "safe": false
+    },
+    "receives_a_dispute": {
+      "violations": 0,
+      "of": 500,
+      "mean_change": -2.55,
+      "safe": true
+    },
+    "gains_a_good_review": {
+      "violations": 0,
+      "of": 500,
+      "mean_change": 2.38,
+      "safe": true
+    },
+    "gets_id_verified": {
+      "violations": 0,
+      "of": 500,
+      "mean_change": 4.27,
+      "safe": true
+    },
+    "adds_portfolio_photo": {
+      "violations": 0,
+      "of": 500,
+      "mean_change": 0.62,
+      "safe": true
+    },
+    "replies_slower": {
+      "violations": 0,
+      "of": 500,
+      "mean_change": -1.41,
+      "safe": true
+    },
+    "earns_a_repeat_hire": {
+      "violations": 0,
+      "of": 500,
+      "mean_change": 1.25,
+      "safe": true
+    }
+  },
+  "events_provably_safe": "7/8",
   "features": [
-    "completed_jobs",
-    "total_jobs",
-    "cancelled_jobs",
-    "avg_rating",
-    "review_count",
+    "completion_rate",
+    "dispute_rate",
     "repeat_hires",
-    "disputes",
-    "avg_response_minutes",
+    "rating_norm",
+    "completed_jobs",
+    "cancelled_jobs",
+    "review_count",
+    "response_minutes",
     "response_known",
     "account_age_days",
     "id_verified",
     "portfolio_count"
+  ],
+  "monotonic_cst": [
+    1,
+    -1,
+    1,
+    1,
+    1,
+    -1,
+    1,
+    -1,
+    0,
+    1,
+    1,
+    1
   ],
   "n_rows": 6000
 }

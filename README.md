@@ -148,21 +148,31 @@ against the client's own words and returns an ordering plus human-readable reaso
 learning-to-rank stage, currently with hand-set weights.
 
 ### 2. Trust Score — `POST /trust/score`
-A **trained GradientBoosting regressor** (MAE 2.59 on a 0–100 scale, R² 0.93) over the worker's
-raw platform counters: completion, ratings, review count, repeat hires, response time, disputes,
-account age, ID verification and portfolio. Top drivers are `id_verified`, `repeat_hires` and
-`avg_rating`. A brand-new worker scores ≈53 and is labelled "New" — 18% of the training rows are
-fresh accounts, so the model learns that no history means *unknown*, not *bad*. Recomputed
-automatically on completion, cancellation, dispute, new review and ID verification.
+A **trained HistGradientBoosting regressor with monotonic constraints** (MAE 2.79 on a 0–100
+scale, R² 0.92 against a 0.94 ceiling) over rates derived from the worker's counters: completion,
+ratings, repeat hires, response time, disputes, account age, ID verification and portfolio.
+
+It is deliberately *slightly less accurate* than an unconstrained model, in exchange for a
+guarantee: **7 of the 8 events a worker can experience are provably safe** — completing a job can
+never lower the score, a dispute can never raise it. The unconstrained version violated that in
+216 of 500 audited profiles. The audit runs on every training run and is locked in by a test.
+
+A brand-new worker scores ≈53 and is labelled "New" — 18% of training rows are fresh accounts, so
+the model learns that no history means *unknown*, not *bad*. Recomputed automatically on
+completion, cancellation, dispute, new review and ID verification.
 
 ### 3. Fair price — `POST /price/suggest`
-A **trained RandomForest** (MAE ~9.7% of mean price) over category, city, duration, urgency and
+A **trained HistGradientBoosting on log(price)** over category, city, duration, urgency and
 experience, returning a min/median/max PKR range. Shown in the job form, the offer form, the
 counter-offer modal and the worker's rate settings; snapshotted onto each job at posting time.
 
-Its headline R² of 0.97 is flattered by the fact that a month obviously costs more than a day —
-`duration_type` alone is 87% of the feature importance. The honest number is the R² **within**
-each duration bucket: ~0.79. Both are recorded in `ai-service/models/price_model_meta.json`.
+The headline R² of 0.98 is flattered by the fact that a month obviously costs more than a day.
+The honest number is accuracy **within** a duration bucket: **7.5% MAE**, against a computable
+ceiling of ~6.9% — so it captures **88–94% of the achievable accuracy**. (The ceiling exists
+because each row's base rate is drawn from a ±12% band the model never sees.) Training in log
+space rather than on raw prices took within-bucket MAE from 9.7% → 7.5%, and the ± band is
+calibrated from the model's own residuals instead of a hard-coded percentage. All recorded in
+`ai-service/models/price_model_meta.json`.
 
 ### 4. Negotiation assistant — *not built*
 The stretch goal (fine-tuned small LLM for counter-offer suggestions) was intentionally left out;
@@ -180,8 +190,8 @@ Being explicit about this, since it is a student/portfolio project:
 | **Payments** | **Stripe test mode only.** `backend/src/config/env.js` *rejects any key that doesn't start with `sk_test_`*, and the frontend refuses a publishable key that isn't `pk_test_`. No real money can move. Use card `4242 4242 4242 4242`. |
 | **AI models** | **Trained for trust + pricing, heuristic for matching.** Every endpoint falls back to a documented heuristic if its model file is absent, and the `source` field in each response says which path answered. |
 | ↳ matching | **Heuristic.** Synonym-expanded lexical overlap standing in for sentence-transformer embeddings + FAISS/Atlas Vector Search. Swap-in plan at the top of `matching.py`. |
-| ↳ trust | **Trained** GradientBoosting (R² 0.93, MAE 2.59 pts) on WorkNest's own worker counters. |
-| ↳ pricing | **Trained** RandomForest (MAE 9.7% of mean price) on WorkNest's 18 categories × 12 cities. |
+| ↳ trust | **Trained** HistGradientBoosting, monotonic (R² 0.92, MAE 2.79 pts) — 7/8 worker events provably safe. |
+| ↳ pricing | **Trained** HistGradientBoosting on log(price), 7.5% MAE — 88–94% of the computable ceiling. |
 | ↳ **training data** | **Synthetic — this is the real caveat.** No booking history exists pre-launch, so prices are sampled around hand-assembled 2026 Pakistani wage anchors (`ai-service/data/rate_anchors.json` — **not** a wage survey) and trust targets come from a documented formula plus noise. The models are genuinely trained and evaluated, but their ceiling is the assumptions in the generators. Point the scripts at real bookings later — the feature contract is already identical. |
 | **ID verification** | Documents really are uploaded and stored privately, but approval is a manual admin endpoint — no automated document checks. |
 | **Cloudinary** | Real, but optional: upload endpoints return a clear 503 if credentials are absent, so the rest of the app runs without them. |
@@ -330,7 +340,7 @@ compound indexes for the common filter/sort paths; unique `(job, worker)` on off
 
 ```bash
 cd backend    && npm test      # 41 tests — auth, profiles, jobs, negotiation, escrow, reviews, AI integration
-cd ai-service && pytest -q     # 26 tests — matching, trust, pricing, full vocabulary coverage, fallbacks
+cd ai-service && pytest -q     # 28 tests — matching, trust, pricing, vocabulary coverage, monotonicity, fallbacks
 cd frontend   && npm run build # type/JSX + bundling check
 ```
 

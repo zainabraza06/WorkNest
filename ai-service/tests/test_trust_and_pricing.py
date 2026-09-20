@@ -106,6 +106,38 @@ def test_heuristic_fallback_matches_the_contract(monkeypatch):
     assert set(strong["breakdown"]) >= {"completion", "rating", "verification", "disputes"}
 
 
+def test_trust_never_punishes_progress_or_rewards_disputes():
+    """The integrity guarantee the monotonic constraints buy us — locked in so a retrain
+    cannot quietly regress it. Verified through the API, not the model object."""
+    worker = {
+        "completed_jobs": 20, "total_jobs": 22, "cancelled_jobs": 2, "avg_rating": 4.3,
+        "review_count": 15, "repeat_hires": 4, "disputes": 1, "avg_response_minutes": 90,
+        "account_age_days": 300, "id_verified": False, "portfolio_count": 2,
+    }
+    base = score(worker)["score"]
+
+    # Finishing a job must never lower the score
+    assert score({**worker, "completed_jobs": 21, "total_jobs": 23})["score"] >= base
+    # A dispute must never raise it
+    assert score({**worker, "disputes": 2})["score"] <= base
+    # Verification, reviews, repeat hires and portfolio can only help
+    assert score({**worker, "id_verified": True})["score"] >= base
+    assert score({**worker, "review_count": 16, "avg_rating": 4.5})["score"] >= base
+    assert score({**worker, "repeat_hires": 5})["score"] >= base
+    assert score({**worker, "portfolio_count": 3})["score"] >= base
+    # Replying slower must never help
+    assert score({**worker, "avg_response_minutes": 600})["score"] <= base
+
+
+def test_price_band_is_calibrated_not_guessed():
+    p = suggest(category="plumbing", city="Lahore")
+    spread_low = p["median"] / p["min"]
+    spread_high = p["max"] / p["median"]
+    # An 80% interval from the model's residuals — tight, but not a token +/- 1%
+    assert 1.02 < spread_low < 1.35
+    assert 1.02 < spread_high < 1.35
+
+
 # ── Pricing ───────────────────────────────────────────────────────────
 def test_price_range_is_ordered_and_in_pkr():
     p = suggest(category="plumbing", city="Lahore")
