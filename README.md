@@ -44,7 +44,7 @@ is the only thing that touches MongoDB; the AI service is stateless and never se
 | ------------ | ---------------------------------------------------------------------- | --------------------------------------------------------- | ------------------------------ |
 | `frontend/`  | React 19 (Vite), TailwindCSS v4, React Router, TanStack Query, Zustand  | UI, routing, client state                                  | Call the AI service directly   |
 | `backend/`   | Node 20+, Express 5, Mongoose, JWT, Socket.io, Stripe, Cloudinary       | Auth, business rules, **all** DB reads/writes, payments    | Import or run Python           |
-| `ai-service/`| Python 3.11+, FastAPI, Pydantic                                        | Ranking, scoring, price prediction — pure functions of JSON | Touch MongoDB or hold state    |
+| `ai-service/`| Python 3.11+, FastAPI, scikit-learn, pandas                            | Ranking, scoring, price prediction — pure functions of JSON | Touch MongoDB or hold state    |
 
 **Graceful degradation:** if the AI service is unreachable, the backend falls back to MongoDB
 text search, a built-in placeholder Trust Score, and simply hides price guidance. A circuit
@@ -72,8 +72,12 @@ WorkNest/
 └── ai-service/
     └── app/
         ├── routers/      # /match /trust /price
-        ├── services/     # matching, trust, pricing  ← swap dummies for models here
+        ├── services/     # matching (heuristic), trust + pricing (trained models)
+        ├── taxonomy.py   # mirrors backend constants — models are trained on this vocabulary
         └── schemas.py    # the contract with the backend
+    ├── scripts/          # generate data + train models (models themselves are gitignored)
+    ├── data/             # rate_anchors.json (committed) + generated CSVs (ignored)
+    └── models/           # *.pkl (ignored) + *_meta.json metrics (committed)
 ```
 
 ---
@@ -119,8 +123,11 @@ WorkNest/
 - Ratings feed the worker's stats, which feed the Trust Score, which feeds search ranking.
 
 ### UI/UX
-- Design tokens in `frontend/src/index.css` (teal primary, amber secondary, warm neutrals,
-  1.2 type scale) — no ad-hoc colours or font sizes.
+- Design tokens in `frontend/src/index.css`: near-black ink neutrals with a single hi-vis orange
+  accent (a nod to workwear), Archivo for display type with negative tracking, tight 3–12px radii
+  and hairline borders — no ad-hoc colours or font sizes.
+- Motion is functional, not decorative: scroll reveals, hover lift on cards, animated trust rings,
+  all disabled under `prefers-reduced-motion`.
 - Mobile-first: bottom tab bar on phones, sidebar filters on desktop, 44px touch targets.
 - Accessibility: semantic landmarks, labelled form controls with `aria-describedby` errors,
   keyboard-navigable menus, native `<dialog>` modals (focus trapping for free), skip link,
@@ -141,16 +148,21 @@ against the client's own words and returns an ordering plus human-readable reaso
 learning-to-rank stage, currently with hand-set weights.
 
 ### 2. Trust Score — `POST /trust/score`
-A 0–100 composite from completion rate, average rating, review count, repeat hires, response
-time, disputes, account age, ID verification and portfolio completeness. Scores shrink toward a
-neutral 50 until a worker has history, so a brand-new worker reads "New" rather than "untrustworthy".
-Recomputed automatically on completion, cancellation, dispute, new review and ID verification.
+A **trained GradientBoosting regressor** (MAE 2.59 on a 0–100 scale, R² 0.93) over the worker's
+raw platform counters: completion, ratings, review count, repeat hires, response time, disputes,
+account age, ID verification and portfolio. Top drivers are `id_verified`, `repeat_hires` and
+`avg_rating`. A brand-new worker scores ≈53 and is labelled "New" — 18% of the training rows are
+fresh accounts, so the model learns that no history means *unknown*, not *bad*. Recomputed
+automatically on completion, cancellation, dispute, new review and ID verification.
 
 ### 3. Fair price — `POST /price/suggest`
-Returns a min/median/max PKR range for a job from category base rates × city cost-of-living ×
-urgency × experience × duration (with a bulk discount for weekly/monthly work). Shown in the job
-form, the offer form, the counter-offer modal and the worker's rate settings; snapshotted onto
-each job at posting time.
+A **trained RandomForest** (MAE ~9.7% of mean price) over category, city, duration, urgency and
+experience, returning a min/median/max PKR range. Shown in the job form, the offer form, the
+counter-offer modal and the worker's rate settings; snapshotted onto each job at posting time.
+
+Its headline R² of 0.97 is flattered by the fact that a month obviously costs more than a day —
+`duration_type` alone is 87% of the feature importance. The honest number is the R² **within**
+each duration bucket: ~0.79. Both are recorded in `ai-service/models/price_model_meta.json`.
 
 ### 4. Negotiation assistant — *not built*
 The stretch goal (fine-tuned small LLM for counter-offer suggestions) was intentionally left out;
@@ -166,10 +178,11 @@ Being explicit about this, since it is a student/portfolio project:
 | --- | --- |
 | **Auth, profiles, jobs, negotiation, bookings, reviews, realtime chat** | **Real.** Full implementation against MongoDB, covered by tests. |
 | **Payments** | **Stripe test mode only.** `backend/src/config/env.js` *rejects any key that doesn't start with `sk_test_`*, and the frontend refuses a publishable key that isn't `pk_test_`. No real money can move. Use card `4242 4242 4242 4242`. |
-| **AI models** | **Dummy implementations.** The three endpoints are transparent, deterministic heuristics — not trained models. They are hidden behind real HTTP contracts, so swapping in the trained versions changes nothing outside `ai-service/app/services/`. Each module documents its swap-in plan at the top. |
-| ↳ matching | Synonym-expanded lexical overlap standing in for sentence-transformer embeddings + FAISS/Atlas Vector Search. |
-| ↳ trust | Hand-weighted feature blend standing in for logistic regression / gradient boosting. |
-| ↳ pricing | **Synthetic rate table.** Base daily wages in `ai-service/app/services/pricing.py` were assembled by hand as plausible 2026 Pakistani rates — they are **not** from a wage survey. The real version would train a RandomForest/XGBoost regressor on actual booking prices once the platform has them. |
+| **AI models** | **Trained for trust + pricing, heuristic for matching.** Every endpoint falls back to a documented heuristic if its model file is absent, and the `source` field in each response says which path answered. |
+| ↳ matching | **Heuristic.** Synonym-expanded lexical overlap standing in for sentence-transformer embeddings + FAISS/Atlas Vector Search. Swap-in plan at the top of `matching.py`. |
+| ↳ trust | **Trained** GradientBoosting (R² 0.93, MAE 2.59 pts) on WorkNest's own worker counters. |
+| ↳ pricing | **Trained** RandomForest (MAE 9.7% of mean price) on WorkNest's 18 categories × 12 cities. |
+| ↳ **training data** | **Synthetic — this is the real caveat.** No booking history exists pre-launch, so prices are sampled around hand-assembled 2026 Pakistani wage anchors (`ai-service/data/rate_anchors.json` — **not** a wage survey) and trust targets come from a documented formula plus noise. The models are genuinely trained and evaluated, but their ceiling is the assumptions in the generators. Point the scripts at real bookings later — the feature contract is already identical. |
 | **ID verification** | Documents really are uploaded and stored privately, but approval is a manual admin endpoint — no automated document checks. |
 | **Cloudinary** | Real, but optional: upload endpoints return a clear 503 if credentials are absent, so the rest of the app runs without them. |
 
@@ -199,10 +212,18 @@ cd ai-service
 python -m venv .venv
 .venv\Scripts\activate          # Windows  (source .venv/bin/activate elsewhere)
 pip install -r requirements.txt
+
+# Build the models (gitignored artifacts — under a minute, deterministic seeds)
+python scripts/build_rate_anchors.py
+python scripts/generate_price_data.py && python scripts/train_price_model.py
+python scripts/generate_trust_data.py && python scripts/train_trust_model.py
+
 uvicorn app.main:app --reload   # http://localhost:8000  ·  docs at /docs
 ```
 
-The backend works without it — set `AI_ENABLED=false` to skip it entirely.
+Skip the training step and the service still answers — it falls back to the heuristics and says
+so in `GET /health`. The backend works without the service at all: set `AI_ENABLED=false`.
+See `ai-service/README.md` for metrics and retraining details.
 
 ### 3. Frontend
 
@@ -309,7 +330,7 @@ compound indexes for the common filter/sort paths; unique `(job, worker)` on off
 
 ```bash
 cd backend    && npm test      # 41 tests — auth, profiles, jobs, negotiation, escrow, reviews, AI integration
-cd ai-service && pytest -q     # 18 tests — matching, trust, pricing
+cd ai-service && pytest -q     # 26 tests — matching, trust, pricing, full vocabulary coverage, fallbacks
 cd frontend   && npm run build # type/JSX + bundling check
 ```
 
