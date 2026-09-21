@@ -14,6 +14,7 @@ import { Booking, ClientProfile, Job, Message, Offer, Payment, Review, User, Wor
 import { BOOKING_STATUS, JOB_STATUS, OFFER_STATUS, PAYMENT_STATUS, PLATFORM_FEE_RATE, ROLES } from '../constants/index.js';
 import { computeEndDate } from '../utils/dates.js';
 import { refreshTrustScore } from '../services/trust.service.js';
+import { recomputeWorkerRatings, seedWorkerHistory } from './history.js';
 
 const PASSWORD = 'Password123';
 
@@ -338,12 +339,21 @@ async function seed() {
     },
   ]);
   await ClientProfile.updateOne({ user: acClient.user._id }, { 'stats.hires': 1, 'stats.avgRating': 5, 'stats.reviewCount': 1 });
-  await refreshTrustScore(electrician.user._id);
+
+  // ── Back-fill the history the counters claim ────────────────────
+  // Without this, a profile advertises 38 reviews and can show one, and the first real review
+  // posted recomputes the average from the Review collection and collapses it.
+  const history = await seedWorkerHistory(workers);
+  await recomputeWorkerRatings();
+
+  // Trust depends on those counters, so it is scored last, against the finished picture
+  for (const { user } of workers) await refreshTrustScore(user._id);
 
   console.log(`
 Seed complete:
   ${workers.length} workers, ${clients.length} clients, 1 admin
   ${jobs.length} jobs (1 open negotiation, 1 completed booking with reviews)
+  ${history.bookings} historical bookings and ${history.reviews} reviews from ${history.pastClients} past clients
 
   Log in with any of these — password: ${PASSWORD}
     worker1@worknest.test   (Ahmed Raza, electrician, strong history)
