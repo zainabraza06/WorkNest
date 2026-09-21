@@ -14,7 +14,7 @@ import { Booking, ClientProfile, Job, Message, Offer, Payment, Review, User, Wor
 import { BOOKING_STATUS, JOB_STATUS, OFFER_STATUS, PAYMENT_STATUS, PLATFORM_FEE_RATE, ROLES } from '../constants/index.js';
 import { computeEndDate } from '../utils/dates.js';
 import { refreshTrustScore } from '../services/trust.service.js';
-import { recomputeWorkerRatings, seedWorkerHistory } from './history.js';
+import { recomputeWorkerStats, seedWorkerHistory } from './history.js';
 
 const PASSWORD = 'Password123';
 
@@ -344,7 +344,7 @@ async function seed() {
   // Without this, a profile advertises 38 reviews and can show one, and the first real review
   // posted recomputes the average from the Review collection and collapses it.
   const history = await seedWorkerHistory(workers);
-  await recomputeWorkerRatings();
+  await recomputeWorkerStats();
 
   // Trust depends on those counters, so it is scored last, against the finished picture
   for (const { user } of workers) await refreshTrustScore(user._id);

@@ -269,22 +269,47 @@ export async function seedWorkerHistory(workers) {
 }
 
 /**
- * Rewrites every worker's rating counters from the Review documents that now exist, using the
- * same aggregation the app itself uses. After this, the profile is not asserting a rating — it
- * is reporting one, and posting a real review moves it by exactly as much as it should.
+ * Rewrites every worker's counters from the documents that now exist.
+ *
+ * This is what makes the numbers trustworthy: the seed does not get to assert a profile's
+ * history, it gets to create one, and the counters are then read back off it. The demo booking
+ * created elsewhere in the seed is counted here too, which asserted numbers would have missed.
  */
-export async function recomputeWorkerRatings() {
-  const agg = await Review.aggregate([
-    { $group: { _id: '$to', avg: { $avg: '$rating' }, count: { $sum: 1 } } },
+export async function recomputeWorkerStats() {
+  const [ratings, bookingStats] = await Promise.all([
+    Review.aggregate([{ $group: { _id: '$to', avg: { $avg: '$rating' }, count: { $sum: 1 } } }]),
+    Booking.aggregate([
+      { $match: { status: { $in: [BOOKING_STATUS.COMPLETED, BOOKING_STATUS.CANCELLED] } } },
+      // Count per client first, so a client's second completed booking is a repeat hire
+      { $group: { _id: { worker: '$worker', client: '$client', status: '$status' }, n: { $sum: 1 } } },
+      {
+        $group: {
+          _id: '$_id.worker',
+          completedJobs: { $sum: { $cond: [{ $eq: ['$_id.status', BOOKING_STATUS.COMPLETED] }, '$n', 0] } },
+          cancelledJobs: { $sum: { $cond: [{ $eq: ['$_id.status', BOOKING_STATUS.CANCELLED] }, '$n', 0] } },
+          repeatHires: {
+            $sum: { $cond: [{ $eq: ['$_id.status', BOOKING_STATUS.COMPLETED] }, { $subtract: ['$n', 1] }, 0] },
+          },
+        },
+      },
+    ]),
   ]);
 
-  await Promise.all(
-    agg.map(({ _id, avg, count }) =>
-      WorkerProfile.updateOne(
-        { user: _id },
-        { 'stats.avgRating': Math.round(avg * 10) / 10, 'stats.reviewCount': count },
-      ),
-    ),
-  );
-  return agg.length;
+  const byUser = new Map();
+  for (const { _id, avg, count } of ratings) {
+    byUser.set(String(_id), { 'stats.avgRating': Math.round(avg * 10) / 10, 'stats.reviewCount': count });
+  }
+  for (const { _id, completedJobs, cancelledJobs, repeatHires } of bookingStats) {
+    const key = String(_id);
+    byUser.set(key, {
+      ...byUser.get(key),
+      'stats.completedJobs': completedJobs,
+      'stats.cancelledJobs': cancelledJobs,
+      'stats.totalJobs': completedJobs + cancelledJobs,
+      'stats.repeatHires': repeatHires,
+    });
+  }
+
+  await Promise.all([...byUser].map(([user, set]) => WorkerProfile.updateOne({ user }, set)));
+  return byUser.size;
 }

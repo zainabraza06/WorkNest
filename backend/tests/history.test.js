@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { Booking, Review, User, WorkerProfile } from '../src/models/index.js';
 import { BOOKING_STATUS, ROLES } from '../src/constants/index.js';
-import { ratingsFor, recomputeWorkerRatings, seedWorkerHistory } from '../src/scripts/history.js';
+import { ratingsFor, recomputeWorkerStats, seedWorkerHistory } from '../src/scripts/history.js';
 
 /** One worker whose counters are the targets the generated history has to reproduce. */
 async function makeWorker(stats, i = 0) {
@@ -58,7 +58,7 @@ describe('seeded work history', () => {
     const worker = await makeWorker(stats);
 
     await seedWorkerHistory([worker]);
-    await recomputeWorkerRatings();
+    await recomputeWorkerStats();
 
     const [completed, cancelled, reviews] = await Promise.all([
       Booking.countDocuments({ worker: worker.user._id, status: BOOKING_STATUS.COMPLETED }),
@@ -71,10 +71,34 @@ describe('seeded work history', () => {
     expect(completed + cancelled).toBe(stats.totalJobs);
     expect(reviews).toBe(stats.reviewCount);
 
-    // The rating is now reported from the reviews, not asserted by the seed
+    // Every counter is now reported from the documents, not asserted by the seed
     const profile = await WorkerProfile.findOne({ user: worker.user._id });
     expect(profile.stats.reviewCount).toBe(stats.reviewCount);
     expect(profile.stats.avgRating).toBe(stats.avgRating);
+    expect(profile.stats.completedJobs).toBe(stats.completedJobs);
+    expect(profile.stats.cancelledJobs).toBe(stats.cancelledJobs);
+    expect(profile.stats.totalJobs).toBe(stats.totalJobs);
+    expect(profile.stats.repeatHires).toBe(stats.repeatHires);
+  });
+
+  it('counts bookings the seed created elsewhere, which asserted numbers would miss', async () => {
+    const worker = await makeWorker(
+      { totalJobs: 10, completedJobs: 10, cancelledJobs: 0, repeatHires: 0, disputes: 0, avgRating: 5, reviewCount: 5 },
+      4,
+    );
+    await seedWorkerHistory([worker]);
+
+    // An extra completed booking, the way the seed's hand-built demo booking arrives
+    const existing = await Booking.findOne({ worker: worker.user._id });
+    await Booking.create({
+      ...existing.toObject(), _id: undefined, job: existing.job, offer: existing.offer,
+      status: BOOKING_STATUS.COMPLETED, completedAt: new Date(),
+    });
+
+    await recomputeWorkerStats();
+    const profile = await WorkerProfile.findOne({ user: worker.user._id });
+    expect(profile.stats.completedJobs).toBe(11);
+    expect(profile.stats.totalJobs).toBe(11);
   });
 
   it('produces exactly the stated number of repeat hires', async () => {
