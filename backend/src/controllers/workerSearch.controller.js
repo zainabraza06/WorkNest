@@ -161,13 +161,33 @@ async function keywordSearch(query) {
 
 export async function searchWorkers(req, res) {
   const query = req.valid.query;
+  // "Smart" mode only makes sense with something to match against
+  const wantedSmart = query.mode === 'smart' && Boolean(query.q);
 
   let data = null;
-  // "Smart" mode only makes sense with something to match against
-  if (query.mode === 'smart' && query.q && isAiEnabled()) {
+  if (wantedSmart && isAiEnabled()) {
     data = await smartSearch(query);
   }
-  data ??= await keywordSearch(query);
+
+  let relaxedQuery = false;
+  if (!data) {
+    data = await keywordSearch(query);
+
+    // A client describing a symptom ("the lights keep tripping") shares no words with any
+    // profile, so the text index matches nothing and the keyword fallback returns an empty
+    // page — which reads as "no such worker exists" rather than "the matcher is unavailable".
+    // Drop the free text, keep every structured filter, and let the caller say why.
+    if (wantedSmart && !data.items.length) {
+      const sort = query.sort === 'relevance' ? 'trust' : query.sort;
+      data = await keywordSearch({ ...query, q: undefined, sort });
+      relaxedQuery = true;
+    }
+  }
+
+  // The UI needs to distinguish "AI ranked these" from "AI was asleep, here's the next best
+  // thing" — otherwise a cold service silently looks like a bad matcher.
+  data.degraded = wantedSmart && data.mode !== 'smart';
+  data.relaxedQuery = relaxedQuery;
 
   // Training data for the ranker: what was shown, in what order, on which features.
   // Best-effort and awaited only so the id can be returned; failures are swallowed.

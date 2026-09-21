@@ -94,6 +94,38 @@ describe('AI-ranked worker discovery', () => {
     expect(res.status).toBe(200);
     expect(res.body.data.mode).toBe('keyword');
     expect(res.body.data.items).toHaveLength(1);
+    expect(res.body.data.degraded).toBe(true);
+  });
+
+  it('drops the free text rather than returning nothing when the AI is down', async () => {
+    // The whole point of the AI path: these words appear in no profile, so the text index
+    // finds nothing. An empty page would claim no such worker exists.
+    await makeWorker({ headline: 'Licensed electrician', categories: ['electrical'] });
+    aiState.available = false;
+
+    const res = await api().get('/api/workers?mode=smart&q=the lights keep tripping when I turn on the heater');
+    expect(res.status).toBe(200);
+    expect(res.body.data.items).toHaveLength(1);
+    expect(res.body.data.relaxedQuery).toBe(true);
+    expect(res.body.data.degraded).toBe(true);
+  });
+
+  it('keeps hard filters when it relaxes the free text', async () => {
+    await makeWorker({ headline: 'Licensed electrician', categories: ['electrical'], city: 'Lahore' });
+    aiState.available = false;
+
+    const res = await api().get('/api/workers?mode=smart&city=Karachi&q=the lights keep tripping');
+    expect(res.body.data.relaxedQuery).toBe(true);
+    expect(res.body.data.items).toHaveLength(0);
+  });
+
+  it('leaves an explicit keyword search empty rather than second-guessing it', async () => {
+    await makeWorker({ headline: 'Licensed electrician', categories: ['electrical'] });
+
+    const res = await api().get('/api/workers?mode=keyword&q=the lights keep tripping');
+    expect(res.body.data.items).toHaveLength(0);
+    expect(res.body.data.relaxedQuery).toBe(false);
+    expect(res.body.data.degraded).toBe(false);
   });
 
   it('uses keyword mode when no query is given', async () => {

@@ -151,6 +151,18 @@ export default function DiscoverWorkersPage() {
 
           {geoError && <p className="mb-3 text-sm text-danger-700">{geoError}</p>}
 
+          {data?.degraded && (
+            <p className="mb-4 flex items-start gap-2 rounded-md border border-ink-200 bg-ink-50 px-3 py-2.5 text-sm text-ink-600">
+              <Sparkles className="mt-0.5 size-4 shrink-0 text-ink-400" aria-hidden />
+              <span>
+                <span className="font-semibold text-ink-950">Smart match is warming up.</span>{' '}
+                {data.relaxedQuery
+                  ? 'No profile uses those exact words, so these are the highest-rated workers matching your filters. Try again in a moment for results ranked against your description.'
+                  : 'These are keyword results for now — try again in a moment for AI-ranked matches.'}
+              </span>
+            </p>
+          )}
+
           {query.isPending ? (
             <LoadingRegion label="Loading workers" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
               {Array.from({ length: 6 }, (_, i) => (
