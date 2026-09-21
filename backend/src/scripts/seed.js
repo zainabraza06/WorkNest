@@ -15,6 +15,7 @@ import { BOOKING_STATUS, JOB_STATUS, OFFER_STATUS, PAYMENT_STATUS, PLATFORM_FEE_
 import { computeEndDate } from '../utils/dates.js';
 import { refreshTrustScore } from '../services/trust.service.js';
 import { recomputeWorkerStats, seedWorkerHistory } from './history.js';
+import { seedDispute, seedPendingVerification } from './adminFixtures.js';
 
 const PASSWORD = 'Password123';
 
@@ -346,6 +347,17 @@ async function seed() {
   const history = await seedWorkerHistory(workers);
   await recomputeWorkerStats();
 
+  // ── Something for the admin console to act on ───────────────────
+  // Both admin queues would otherwise be empty, and the one area that cannot be reached as a
+  // client or a worker could not be demonstrated at all.
+  const pendingId = await seedPendingVerification(workers[5]); // Bilal Ahmed, currently unverified
+  const dispute = await seedDispute({
+    worker: workers[3],          // Imran Khan, AC technician
+    client: clients[1],          // Usman Tariq, Karachi
+    job: jobs[2],                // "AC not cooling — needs service and gas"
+    amount: 4000,
+  });
+
   // Trust depends on those counters, so it is scored last, against the finished picture
   for (const { user } of workers) await refreshTrustScore(user._id);
 
@@ -354,6 +366,7 @@ Seed complete:
   ${workers.length} workers, ${clients.length} clients, 1 admin
   ${jobs.length} jobs (1 open negotiation, 1 completed booking with reviews)
   ${history.bookings} historical bookings and ${history.reviews} reviews from ${history.pastClients} past clients
+  admin queue: 1 ID verification pending (${pendingId}), 1 dispute${dispute.escrowHeld ? ' with Rs 4,000 genuinely held in Stripe test mode' : ' (no payment — Stripe unavailable)'}
 
   Log in with any of these — password: ${PASSWORD}
     worker1@worknest.test   (Ahmed Raza, electrician, strong history)

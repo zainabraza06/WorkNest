@@ -66,6 +66,7 @@ function Overview() {
 
 /** The CNIC is fetched only when an admin opens it, and never lands in a list response. */
 function DocumentModal({ worker, onClose, onDecide, deciding }) {
+  const [imageFailed, setImageFailed] = useState(false);
   const { data, isPending, isError, error } = useQuery({
     queryKey: ['admin', 'id-document', worker?.user._id],
     queryFn: () => adminApi.idDocument(worker.user._id),
@@ -92,10 +93,17 @@ function DocumentModal({ worker, onClose, onDecide, deciding }) {
     >
       {isPending && <Skeleton className="h-72 w-full" />}
       {isError && <InlineAlert tone="danger">{error?.message ?? 'Could not load the document.'}</InlineAlert>}
-      {data?.url && (
+      {imageFailed && (
+        <InlineAlert tone="warning">
+          The document could not be displayed. Do not approve an identity you have not seen — ask the
+          worker to submit it again.
+        </InlineAlert>
+      )}
+      {data?.url && !imageFailed && (
         <img
           src={data.url}
           alt={`ID document submitted by ${worker.user.name}`}
+          onError={() => setImageFailed(true)}
           className="max-h-[60vh] w-full rounded-md border border-ink-200 object-contain"
         />
       )}
