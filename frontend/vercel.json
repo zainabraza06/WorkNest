@@ -5,7 +5,6 @@
   "framework": "vite",
   "rewrites": [
     {
-      "comment": "React Router owns the routes. Without this, a hard load of /workers/123 asks Vercel for a file that does not exist and 404s.",
       "source": "/((?!assets/).*)",
       "destination": "/index.html"
     }
