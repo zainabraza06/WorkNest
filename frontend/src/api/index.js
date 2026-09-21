@@ -25,6 +25,7 @@ export const authApi = {
 export const usersApi = {
   updateMe: (body) => unwrap(api.patch('/users/me', body)),
   uploadAvatar: (file) => unwrap(api.post('/users/me/avatar', toForm({ avatar: file }))),
+  reviews: (userId, params) => unwrap(api.get(`/users/${userId}/reviews`, { params: clean(params) })),
 };
 
 export const workersApi = {

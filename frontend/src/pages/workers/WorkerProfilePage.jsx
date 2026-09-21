@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { BadgeCheck, Briefcase, CalendarDays, MapPin, Repeat, UserX } from 'lucide-react';
 
 import { rankingApi, workersApi } from '@/api';
+import { ReviewList } from '@/components/reviews/ReviewList';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge, Tag } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -13,7 +14,7 @@ import { StarDisplay } from '@/components/ui/StarRating';
 import { EmptyState, ErrorState } from '@/components/ui/States';
 import { TrustScoreRing } from '@/components/ui/TrustScore';
 import { CATEGORY_MAP } from '@/lib/constants';
-import { formatDate, formatPKR, timeAgo } from '@/lib/format';
+import { formatDate, formatPKR } from '@/lib/format';
 import { useAuthStore } from '@/stores/authStore';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -148,25 +149,7 @@ export default function WorkerProfilePage() {
         <Card>
           <CardHeader title={`Reviews (${w.stats.reviewCount})`} />
           <CardBody>
-            {w.recentReviews?.length ? (
-              <ul className="divide-y divide-ink-100">
-                {w.recentReviews.map((r) => (
-                  <li key={r._id} className="py-4 first:pt-0 last:pb-0">
-                    <div className="flex items-center gap-3">
-                      <Avatar src={r.from?.avatar?.url} name={r.from?.name} size="sm" />
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold">{r.from?.name}</p>
-                        <p className="text-xs text-ink-500">{timeAgo(r.createdAt)}</p>
-                      </div>
-                      <StarDisplay rating={r.rating} />
-                    </div>
-                    {r.text && <p className="mt-2 text-sm text-ink-700">{r.text}</p>}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-ink-600">No reviews yet — reviews appear here after completed jobs.</p>
-            )}
+            <ReviewList userId={userId} total={w.stats.reviewCount} initial={w.recentReviews} />
           </CardBody>
         </Card>
       </div>
