@@ -7,7 +7,8 @@ import { disconnectSocket } from '@/realtime/socket';
 /** Where a user should land after signing in, based on role and whether their profile exists. */
 export function homePathFor(user, profile) {
   if (!user) return '/';
-  if (!profile && user.role !== 'admin') return '/onboarding';
+  if (user.role === 'admin') return '/admin';
+  if (!profile) return '/onboarding';
   return user.role === 'worker' ? '/jobs' : '/dashboard';
 }
 

@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import mongoose from 'mongoose';
 
+import adminRoutes from './admin.routes.js';
 import authRoutes from './auth.routes.js';
 import bookingRoutes from './booking.routes.js';
 import clientRoutes from './client.routes.js';
@@ -31,5 +32,6 @@ router.use('/offers', offerRoutes);
 router.use('/bookings', bookingRoutes);
 router.use('/price', priceRoutes);
 router.use('/ranking', rankingRoutes);
+router.use('/admin', adminRoutes);
 
 export default router;

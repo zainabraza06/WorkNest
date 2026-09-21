@@ -25,7 +25,6 @@ export const authApi = {
 export const usersApi = {
   updateMe: (body) => unwrap(api.patch('/users/me', body)),
   uploadAvatar: (file) => unwrap(api.post('/users/me/avatar', toForm({ avatar: file }))),
-  reviews: (userId, params) => unwrap(api.get(`/users/${userId}/reviews`, { params: clean(params) })),
 };
 
 export const workersApi = {
@@ -64,4 +63,14 @@ export const jobsApi = {
   create: (body) => unwrap(api.post('/jobs', body)),
   update: (id, body) => unwrap(api.patch(`/jobs/${id}`, body)),
   cancel: (id, reason) => unwrap(api.post(`/jobs/${id}/cancel`, { reason })),
+};
+
+export const adminApi = {
+  overview: () => unwrap(api.get('/admin/overview')),
+  verifications: (params) => unwrap(api.get('/admin/verifications', { params: clean(params) })),
+  disputes: (params) => unwrap(api.get('/admin/disputes', { params: clean(params) })),
+  // The document and the decision live with the worker resource they act on
+  idDocument: (userId) => unwrap(api.get(`/workers/${userId}/id-document`)),
+  decideId: (userId, status) => unwrap(api.patch(`/workers/${userId}/id-verification`, { status })),
+  resolveDispute: (bookingId, outcome, note) => unwrap(api.post(`/bookings/${bookingId}/resolve`, { outcome, note })),
 };

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 
-import { usersApi } from '@/api';
+import { reviewsApi } from '@/api/negotiation';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { Pagination } from '@/components/ui/Pagination';
@@ -40,7 +40,7 @@ export function ReviewList({ userId, total = 0, initial = [] }) {
 
   const query = useQuery({
     queryKey: ['reviews', userId, page],
-    queryFn: () => usersApi.reviews(userId, { page, limit: PAGE_SIZE }),
+    queryFn: () => reviewsApi.forUser(userId, { page, limit: PAGE_SIZE }),
     enabled: page !== null,
     placeholderData: keepPreviousData,
   });

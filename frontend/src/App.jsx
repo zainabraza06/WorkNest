@@ -20,6 +20,7 @@ const NegotiationsPage = lazy(() => import('@/pages/negotiations/NegotiationsPag
 const BookingsPage = lazy(() => import('@/pages/bookings/BookingsPage'));
 const BookingDetailPage = lazy(() => import('@/pages/bookings/BookingDetailPage'));
 const ClientDashboardPage = lazy(() => import('@/pages/dashboard/ClientDashboardPage'));
+const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 
 function PageFallback() {
@@ -62,6 +63,10 @@ export default function App() {
             <Route path="dashboard" element={<ClientDashboardPage />} />
             <Route path="jobs/new" element={<JobPostPage />} />
             <Route path="jobs/:id/edit" element={<JobPostPage />} />
+          </Route>
+
+          <Route element={<RequireAuth roles={['admin']} />}>
+            <Route path="admin" element={<AdminDashboardPage />} />
           </Route>
 
           <Route element={<RequireAuth roles={['worker']} />}>

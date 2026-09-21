@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation } from 'react-router';
-import { Briefcase, ChevronDown, LayoutDashboard, LogOut, MessageSquare, PlusCircle, Search, User } from 'lucide-react';
+import { Briefcase, ChevronDown, LayoutDashboard, LogOut, MessageSquare, PlusCircle, Search, ShieldCheck, User } from 'lucide-react';
 
 import { useAuthStore } from '@/stores/authStore';
 import { useLogout, useSessionSync } from '@/hooks/useAuth';
@@ -25,6 +25,13 @@ function navFor(role) {
       { to: '/dashboard', label: 'My jobs', icon: LayoutDashboard },
       { to: '/workers', label: 'Find workers', icon: Search },
       { to: '/negotiations', label: 'Offers', icon: MessageSquare },
+      { to: '/bookings', label: 'Bookings', icon: Briefcase },
+    ];
+  }
+  if (role === 'admin') {
+    return [
+      { to: '/admin', label: 'Admin', icon: ShieldCheck },
+      { to: '/workers', label: 'Workers', icon: Search },
       { to: '/bookings', label: 'Bookings', icon: Briefcase },
     ];
   }
