@@ -155,6 +155,22 @@
     font-feature-settings: 'tnum';
   }
 
+  /*
+   * Tailwind v4's Preflight leaves buttons on the browser default cursor (an arrow); v3 set a
+   * pointer. Restore it — a control that does something should look like it does something,
+   * and patching cursor-pointer onto every button by hand is how one gets missed.
+   *
+   * Disabled controls keep the arrow: the pointer would promise an action that will not happen.
+   */
+  button:not(:disabled),
+  select:not(:disabled),
+  summary,
+  [role='button']:not([aria-disabled='true']),
+  label:has(> input[type='checkbox']:not(:disabled)),
+  label:has(> input[type='radio']:not(:disabled)) {
+    cursor: pointer;
+  }
+
   :focus-visible {
     @apply outline-2 outline-offset-2 outline-primary-500;
   }
