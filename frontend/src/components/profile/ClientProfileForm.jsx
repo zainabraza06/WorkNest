@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 
 import { clientsApi } from '@/api';
@@ -7,12 +7,14 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Textarea } from '@/components/ui/Field';
 import { InlineAlert } from '@/components/ui/States';
+import { focusFirstErrorSoon } from '@/lib/focusFirstError';
 import { useAuthStore } from '@/stores/authStore';
 
 export function ClientProfileForm({ profile, onSaved, submitLabel = 'Save profile' }) {
   const [place, setPlace] = useState({ city: profile?.city ?? '', address: profile?.address ?? '', location: fromPoint(profile?.location) });
   const [about, setAbout] = useState(profile?.about ?? '');
   const [localErrors, setLocalErrors] = useState({});
+  const formRef = useRef(null);
   const setProfile = useAuthStore((s) => s.setProfile);
 
   const save = useMutation({
@@ -21,6 +23,8 @@ export function ClientProfileForm({ profile, onSaved, submitLabel = 'Save profil
       setProfile(saved);
       onSaved?.(saved);
     },
+    // The server's message renders at the top of the form, which is off-screen from the button
+    onError: () => focusFirstErrorSoon(formRef.current),
   });
 
   const errors = { ...(save.error?.fieldErrors ?? {}), ...localErrors };
@@ -29,6 +33,7 @@ export function ClientProfileForm({ profile, onSaved, submitLabel = 'Save profil
     e.preventDefault();
     if (!place.city || !place.location) {
       setLocalErrors({ city: 'Select your city' });
+      focusFirstErrorSoon(formRef.current);
       return;
     }
     setLocalErrors({});
@@ -36,7 +41,7 @@ export function ClientProfileForm({ profile, onSaved, submitLabel = 'Save profil
   };
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
+    <form ref={formRef} onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
       {save.error && <InlineAlert>{save.error.message}</InlineAlert>}
       <Card>
         <CardHeader title="Your location" description="Used to find workers near you. Your exact address is only shared with workers you hire." />

@@ -43,10 +43,11 @@ export function TagInput({ label, value = [], onChange, placeholder, max = 20, h
           onBlur={() => draft && add(draft)}
           placeholder={value.length ? '' : placeholder}
           aria-describedby={`${id}-hint`}
+          aria-invalid={Boolean(error) || undefined}
           className="min-w-32 flex-1 border-0 bg-transparent px-1 py-1 text-base focus:outline-none sm:text-sm"
         />
       </div>
-      <p id={`${id}-hint`} className={error ? 'text-xs font-medium text-danger-700' : 'text-xs text-ink-500'}>
+      <p id={`${id}-hint`} role={error ? 'alert' : undefined} className={error ? 'text-xs font-medium text-danger-700' : 'text-xs text-ink-500'}>
         {error ?? hint ?? 'Press Enter or comma to add.'}
       </p>
     </div>

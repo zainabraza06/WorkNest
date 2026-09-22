@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 
 import { workersApi } from '@/api';
@@ -12,6 +12,7 @@ import { Input, Textarea } from '@/components/ui/Field';
 import { InlineAlert } from '@/components/ui/States';
 import { CATEGORIES } from '@/lib/constants';
 import { cn } from '@/lib/cn';
+import { focusFirstErrorSoon } from '@/lib/focusFirstError';
 import { useAuthStore } from '@/stores/authStore';
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -47,6 +48,7 @@ function validateLocally(f) {
 export function WorkerProfileForm({ profile, onSaved, submitLabel = 'Save profile' }) {
   const [form, setForm] = useState(() => initialState(profile));
   const [localErrors, setLocalErrors] = useState({});
+  const formRef = useRef(null);
   const setProfile = useAuthStore((s) => s.setProfile);
 
   const save = useMutation({
@@ -55,6 +57,8 @@ export function WorkerProfileForm({ profile, onSaved, submitLabel = 'Save profil
       setProfile(saved);
       onSaved?.(saved);
     },
+    // The server's message renders at the top of the form, which is off-screen from the button
+    onError: () => focusFirstErrorSoon(formRef.current),
   });
 
   const errors = { ...(save.error?.fieldErrors ?? {}), ...localErrors };
@@ -65,7 +69,10 @@ export function WorkerProfileForm({ profile, onSaved, submitLabel = 'Save profil
     e.preventDefault();
     const found = validateLocally(form);
     setLocalErrors(found);
-    if (Object.keys(found).length) return;
+    if (Object.keys(found).length) {
+      focusFirstErrorSoon(formRef.current);
+      return;
+    }
 
     save.mutate({
       headline: form.headline || undefined,
@@ -84,7 +91,7 @@ export function WorkerProfileForm({ profile, onSaved, submitLabel = 'Save profil
   };
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
+    <form ref={formRef} onSubmit={onSubmit} className="flex flex-col gap-5" noValidate>
       {save.error && <InlineAlert>{save.error.message}</InlineAlert>}
 
       <Card>

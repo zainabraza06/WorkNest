@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Check, ChevronLeft } from 'lucide-react';
 
 import { RadioCards } from '@/components/forms/ChipSelect';
@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Input, Select, Textarea } from '@/components/ui/Field';
 import { InlineAlert } from '@/components/ui/States';
+import { focusFirstErrorSoon } from '@/lib/focusFirstError';
 import { CATEGORIES, CATEGORY_MAP, DURATION_MAP, DURATION_TYPES, URGENCY } from '@/lib/constants';
 import { cn } from '@/lib/cn';
 import { formatBudget, formatDate, formatDuration } from '@/lib/format';
@@ -70,6 +71,7 @@ export function JobForm({ initial, onSubmit, submitting, serverError, submitLabe
   const [form, setForm] = useState(initial);
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState({});
+  const formRef = useRef(null);
   const set = (patch) => setForm((f) => ({ ...f, ...patch }));
 
   const allErrors = { ...(serverError?.fieldErrors ?? {}), ...errors };
@@ -80,7 +82,10 @@ export function JobForm({ initial, onSubmit, submitting, serverError, submitLabe
     e.preventDefault();
     const found = validateStep(step, form);
     setErrors(found);
-    if (Object.keys(found).length) return;
+    if (Object.keys(found).length) {
+      focusFirstErrorSoon(formRef.current);
+      return;
+    }
     if (!isLast) {
       setStep((s) => s + 1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -111,7 +116,7 @@ export function JobForm({ initial, onSubmit, submitting, serverError, submitLabe
   };
 
   return (
-    <form onSubmit={next} noValidate className="flex flex-col gap-5">
+    <form ref={formRef} onSubmit={next} noValidate className="flex flex-col gap-5">
       {/* Progress */}
       <ol className="grid grid-cols-4 gap-2" aria-label="Progress">
         {STEPS.map((label, i) => (
