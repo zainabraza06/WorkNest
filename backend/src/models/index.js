@@ -8,3 +8,4 @@ export { Payment } from './Payment.js';
 export { Review } from './Review.js';
 export { Message } from './Message.js';
 export { SearchImpression } from './SearchImpression.js';
+export { Notification } from './Notification.js';

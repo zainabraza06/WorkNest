@@ -6,6 +6,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useLogout, useSessionSync } from '@/hooks/useAuth';
 import { cn } from '@/lib/cn';
 import { Avatar } from '@/components/ui/Avatar';
+import { NotificationBell } from './NotificationBell';
 import { Button } from '@/components/ui/Button';
 import { Toaster } from '@/components/feedback/Toaster';
 import { RealtimeBridge } from '@/realtime/RealtimeBridge';
@@ -142,6 +143,7 @@ export function AppLayout() {
                     <PlusCircle className="size-3.5" aria-hidden /> Post a job
                   </Button>
                 )}
+                <NotificationBell />
                 <UserMenu user={user} />
               </>
             ) : (

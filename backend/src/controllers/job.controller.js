@@ -5,6 +5,7 @@ import { toPoint } from '../validators/common.js';
 import { KM_TO_RADIANS, keywordRegexFilter, paginateAggregate } from '../utils/query.js';
 import { suggestPrice } from '../services/ai.service.js';
 import { OFFER_POPULATE, postMessage } from '../services/negotiation.service.js';
+import { notify } from '../services/notification.service.js';
 import { emitToUser } from '../socket/index.js';
 
 const OPEN_STATUSES = [JOB_STATUS.POSTED, JOB_STATUS.NEGOTIATING];
@@ -77,6 +78,12 @@ export async function createJob(req, res) {
     // Same populated shape the client receives for a worker's bid, so one client handles both
     await offer.populate(OFFER_POPULATE);
     emitToUser(invitedWorker, 'offer:new', offer);
+    await notify(invitedWorker, {
+      type: 'hire_request',
+      title: `${req.user.name} wants to hire you`,
+      body: `Rs ${offerAmount.toLocaleString('en-PK')} for “${job.title}”`,
+      link: `/negotiations/${offer._id}`,
+    });
 
     return res.status(201).json({ success: true, data: { ...job.toJSON(), offer: offer.toJSON() } });
   }

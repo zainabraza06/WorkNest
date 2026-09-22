@@ -2,6 +2,20 @@ import { Booking, ClientProfile, Job, Payment, WorkerProfile } from '../models/i
 import { BOOKING_STATUS, JOB_STATUS, PAYMENT_STATUS } from '../constants/index.js';
 import { emitToUser } from '../socket/index.js';
 import { refreshTrustScore } from './trust.service.js';
+import { notify } from './notification.service.js';
+
+/**
+ * What each booking state means to the two people in it. Both get a notification: unlike the
+ * negotiation, a booking moving is news to the other side whoever triggered it, and the money
+ * ones are news to both.
+ */
+const BOOKING_NEWS = {
+  [BOOKING_STATUS.CONFIRMED]: { worker: 'Booking confirmed — payment is held in escrow', client: 'Payment held — your booking is confirmed' },
+  [BOOKING_STATUS.IN_PROGRESS]: { worker: 'You marked the work as started', client: 'The worker has started the work' },
+  [BOOKING_STATUS.COMPLETED]: { worker: 'Work completed — payment released', client: 'Work marked complete — release the payment when you are happy' },
+  [BOOKING_STATUS.CANCELLED]: { worker: 'Booking cancelled', client: 'Booking cancelled' },
+  [BOOKING_STATUS.DISPUTED]: { worker: 'A dispute was raised on this booking', client: 'A dispute was raised on this booking' },
+};
 
 export function pushTimeline(booking, status, by, note) {
   booking.status = status;
@@ -11,6 +25,13 @@ export function pushTimeline(booking, status, by, note) {
 export function notifyBooking(booking) {
   emitToUser(booking.worker, 'booking:updated', booking);
   emitToUser(booking.client, 'booking:updated', booking);
+
+  const news = BOOKING_NEWS[booking.status];
+  if (!news) return;
+  const link = `/bookings/${booking._id}`;
+  const body = booking.timeline?.at(-1)?.note ?? undefined;
+  void notify(booking.worker, { type: `booking_${booking.status}`, title: news.worker, body, link });
+  void notify(booking.client, { type: `booking_${booking.status}`, title: news.client, body, link });
 }
 
 /**

@@ -6,6 +6,7 @@ import authRoutes from './auth.routes.js';
 import bookingRoutes from './booking.routes.js';
 import clientRoutes from './client.routes.js';
 import jobRoutes from './job.routes.js';
+import notificationRoutes from './notification.routes.js';
 import offerRoutes from './offer.routes.js';
 import priceRoutes from './price.routes.js';
 import rankingRoutes from './ranking.routes.js';
@@ -31,6 +32,7 @@ router.use('/jobs', jobRoutes);
 router.use('/offers', offerRoutes);
 router.use('/bookings', bookingRoutes);
 router.use('/price', priceRoutes);
+router.use('/notifications', notificationRoutes);
 router.use('/ranking', rankingRoutes);
 router.use('/admin', adminRoutes);
 

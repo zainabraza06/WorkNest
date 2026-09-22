@@ -3,6 +3,7 @@ import { ApiError } from '../utils/ApiError.js';
 import { toPoint } from '../validators/common.js';
 import { deleteAsset, IMAGE_TRANSFORMS, signedUrl, uploadBuffer } from '../services/upload.service.js';
 import { refreshTrustScore } from '../services/trust.service.js';
+import { notify } from '../services/notification.service.js';
 
 const MAX_PORTFOLIO = 12;
 const PUBLIC_USER_FIELDS = 'name avatar createdAt';
@@ -129,6 +130,16 @@ export async function decideIdVerification(req, res) {
   await profile.save();
   // Verification is a Trust Score input, so rescore immediately
   await refreshTrustScore(profile.user);
+
+  const verified = profile.idVerification.status === 'verified';
+  await notify(profile.user, {
+    type: 'id_verification',
+    title: verified ? 'Your ID has been verified' : 'Your ID document was rejected',
+    body: verified
+      ? 'The verified badge is now on your profile and your Trust Score has been updated.'
+      : 'Submit a clearer photo of your CNIC from your profile to try again.',
+    link: '/profile/edit',
+  });
 
   res.json({ success: true, data: { status: profile.idVerification.status } });
 }

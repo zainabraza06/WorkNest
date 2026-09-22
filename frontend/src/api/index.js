@@ -74,3 +74,8 @@ export const adminApi = {
   decideId: (userId, status) => unwrap(api.patch(`/workers/${userId}/id-verification`, { status })),
   resolveDispute: (bookingId, outcome, note) => unwrap(api.post(`/bookings/${bookingId}/resolve`, { outcome, note })),
 };
+
+export const notificationsApi = {
+  list: (params) => unwrap(api.get('/notifications', { params: clean(params) })),
+  markRead: (id) => unwrap(api.post('/notifications/read', id ? { id } : {})),
+};

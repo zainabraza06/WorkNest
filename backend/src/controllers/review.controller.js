@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import { Booking, ClientProfile, Job, Review, WorkerProfile } from '../models/index.js';
 import { BOOKING_STATUS, JOB_STATUS, ROLES } from '../constants/index.js';
 import { emitToUser } from '../socket/index.js';
+import { notify } from '../services/notification.service.js';
 import { refreshTrustScore } from '../services/trust.service.js';
 import { ApiError } from '../utils/ApiError.js';
 
@@ -43,6 +44,12 @@ export async function createReview(req, res) {
 
   await review.populate('from', 'name avatar');
   emitToUser(to, 'review:new', review);
+  await notify(to, {
+    type: 'review_new',
+    title: `${req.user.name} left you a ${review.rating}-star review`,
+    body: review.text || undefined,
+    link: role === ROLES.CLIENT ? `/workers/${to}` : `/bookings/${booking._id}`,
+  });
   res.status(201).json({ success: true, data: review });
 }
 

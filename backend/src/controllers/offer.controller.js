@@ -4,6 +4,7 @@ import { Booking, Job, Message, Offer, WorkerProfile } from '../models/index.js'
 import { BOOKING_STATUS, JOB_STATUS, OFFER_STATUS, ROLES } from '../constants/index.js';
 import { emitToOffer, emitToUser } from '../socket/index.js';
 import { OFFER_POPULATE, postMessage } from '../services/negotiation.service.js';
+import { notify, notifyOthers } from '../services/notification.service.js';
 import { ApiError } from '../utils/ApiError.js';
 import { computeEndDate } from '../utils/dates.js';
 import { recordHire } from '../services/ranking.service.js';
@@ -12,6 +13,7 @@ const OPEN_JOB = [JOB_STATUS.POSTED, JOB_STATUS.NEGOTIATING];
 const POPULATE = OFFER_POPULATE;
 
 const other = (role) => (role === ROLES.WORKER ? ROLES.CLIENT : ROLES.WORKER);
+const rs = (n) => `Rs ${Number(n).toLocaleString('en-PK')}`;
 
 async function loadParticipantOffer(offerId, user) {
   const offer = await Offer.findById(offerId);
@@ -96,6 +98,12 @@ export async function createOffer(req, res) {
   await postMessage(offer, { sender: req.user._id, type: 'offer', text: coverNote, roundId: offer.rounds[0]._id });
   await offer.populate(POPULATE);
   emitToUser(job.client, 'offer:new', offer);
+  await notify(job.client, {
+    type: 'offer_new',
+    title: `New offer from ${offer.worker.name}`,
+    body: `${rs(offer.rounds[0].amount)} for “${job.title}”`,
+    link: `/negotiations/${offer._id}`,
+  });
 
   res.status(201).json({ success: true, data: offer });
 }
@@ -201,6 +209,12 @@ export async function counterOffer(req, res) {
   await postMessage(offer, { sender: req.user._id, type: 'offer', text: message, roundId: offer.rounds.at(-1)._id });
   await offer.populate(POPULATE);
   notifyBoth(offer, 'offer:updated');
+  await notifyOthers([offer.worker._id, offer.client._id], req.user._id, {
+    type: 'offer_countered',
+    title: `${req.user.name} countered at ${rs(amount)}`,
+    body: `“${offer.job.title}” — it is your turn to respond`,
+    link: `/negotiations/${offer._id}`,
+  });
 
   res.json({ success: true, data: offer });
 }
@@ -268,6 +282,21 @@ export async function acceptOffer(req, res) {
   notifyBoth(claimed, 'offer:updated');
   notifyBoth(claimed, 'booking:updated', booking);
 
+  await notifyOthers([claimed.worker._id, claimed.client._id], req.user._id, {
+    type: 'offer_accepted',
+    title: `${req.user.name} accepted at ${rs(round.amount)}`,
+    body: `“${claimed.job.title}” — the client now pays into escrow to confirm it`,
+    link: `/bookings/${booking._id}`,
+  });
+  for (const l of losers) {
+    await notify(l.worker, {
+      type: 'offer_closed',
+      title: 'Another worker was hired',
+      body: `The client hired someone else for “${job.title}”`,
+      link: `/negotiations/${l._id}`,
+    });
+  }
+
   res.json({ success: true, data: { offer: claimed, booking } });
 }
 
@@ -287,6 +316,12 @@ async function closeWithStatus(req, res, { status, allowedRole, requireTurn, sys
   await postMessage(offer, { type: 'system', text: reason ? `${systemText} Reason: ${reason}` : systemText });
   await offer.populate(POPULATE);
   notifyBoth(offer, 'offer:updated');
+  await notifyOthers([offer.worker._id, offer.client._id], req.user._id, {
+    type: `offer_${status}`,
+    title: status === OFFER_STATUS.REJECTED ? 'Your offer was declined' : 'An offer was withdrawn',
+    body: `“${offer.job.title}”${reason ? ` — ${reason}` : ''}`,
+    link: `/negotiations/${offer._id}`,
+  });
 
   res.json({ success: true, data: offer });
 }
@@ -321,6 +356,12 @@ export async function sendMessage(req, res) {
 
   const recipient = offer.worker.equals(req.user._id) ? offer.client : offer.worker;
   emitToUser(recipient, 'thread:activity', { offerId: offer._id, message });
+  await notify(recipient, {
+    type: 'message_new',
+    title: `Message from ${req.user.name}`,
+    body: message.text,
+    link: `/negotiations/${offer._id}`,
+  });
 
   res.status(201).json({ success: true, data: message });
 }
