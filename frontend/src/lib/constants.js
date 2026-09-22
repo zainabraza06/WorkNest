@@ -74,6 +74,36 @@ export const CITIES = [
 
 export const CITY_MAP = Object.fromEntries(CITIES.map((c) => [c.value, c]));
 
+/** Kilometres between two { lat, lng } points. */
+function distanceKm(a, b) {
+  const R = 6371;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const h =
+    Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+/**
+ * The listed city a position falls in, or 'Other' when it is not near any of them.
+ *
+ * 'Other' is excluded from the search: its coordinates are the geographic centre of Pakistan,
+ * so it would win for anyone in the middle of the country rather than acting as the fallback
+ * it is. The 60 km radius is wide enough to cover a city and its suburbs while still telling
+ * Islamabad and Rawalpindi apart — they are only about 15 km apart.
+ */
+export function nearestCity(point, maxKm = 60) {
+  if (!point) return null;
+  let best = null;
+  for (const city of CITIES) {
+    if (city.value === 'Other') continue;
+    const km = distanceKm(point, city);
+    if (!best || km < best.km) best = { value: city.value, km };
+  }
+  return best && best.km <= maxKm ? best.value : 'Other';
+}
+
 export const JOB_STATUS_META = {
   posted: { label: 'Open', tone: 'neutral' },
   negotiating: { label: 'Negotiating', tone: 'solid' },

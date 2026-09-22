@@ -3,7 +3,7 @@ import { LocateFixed, MapPin } from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
 import { Input, Select } from '@/components/ui/Field';
-import { CITIES, CITY_MAP } from '@/lib/constants';
+import { CITIES, CITY_MAP, nearestCity } from '@/lib/constants';
 
 /** GeoJSON { coordinates: [lng, lat] } → { lat, lng } */
 export const fromPoint = (point) => (point?.coordinates ? { lng: point.coordinates[0], lat: point.coordinates[1] } : null);
@@ -44,6 +44,17 @@ export function LocationFields({ value, onChange, errors = {}, addressLabel = 'A
   const onCity = (e) => {
     const city = e.target.value;
     const centre = CITY_MAP[city];
+
+    // Overriding the city that a GPS fix produced means the pin no longer describes where they
+    // say they are, so the pin goes rather than the two contradicting each other. Choosing the
+    // city the fix already agreed with keeps it.
+    const contradicts = precise && value.location && nearestCity(value.location) !== city;
+    if (contradicts) {
+      setStatus({ state: 'idle' });
+      onChange({ ...value, city, locationSource: undefined, ...(centre && { location: { lat: centre.lat, lng: centre.lng } }) });
+      return;
+    }
+
     onChange({ ...value, city, ...(!precise && centre && { location: { lat: centre.lat, lng: centre.lng } }) });
   };
 
@@ -53,8 +64,12 @@ export function LocationFields({ value, onChange, errors = {}, addressLabel = 'A
       // maximumAge 0: the user asked for their position *now*, and a cached fix returns so
       // fast that the button appears to do nothing at all.
       const { accuracy, ...location } = await getCurrentPosition({ maximumAge: 0 });
-      onChange({ ...value, location, locationSource: 'gps' });
-      setStatus({ state: 'done', location, accuracy });
+      // Fill the city in from the fix. Leaving it untouched let the two disagree — an exact
+      // position in Islamabad sitting under a City of Lahore, with no way to tell which the
+      // rest of the app would use.
+      const city = nearestCity(location) ?? value.city;
+      onChange({ ...value, location, city, locationSource: 'gps' });
+      setStatus({ state: 'done', location, accuracy, city, cityChanged: city !== value.city });
     } catch (err) {
       setStatus({ state: 'error', message: err.message });
     }
@@ -83,9 +98,17 @@ export function LocationFields({ value, onChange, errors = {}, addressLabel = 'A
           {/* Confirm the pin that was just taken. Without this, pressing the button a second
               time changes nothing on screen and reads as a dead control. */}
           {status.state === 'done' && status.location && (
-            <span className="numeric block text-xs text-ink-500">
-              Pinned at {status.location.lat.toFixed(4)}, {status.location.lng.toFixed(4)}
-              {status.accuracy ? ` · accurate to about ${Math.round(status.accuracy)} m` : ''}
+            <span className="block text-xs text-ink-500">
+              <span className="numeric">
+                Pinned at {status.location.lat.toFixed(4)}, {status.location.lng.toFixed(4)}
+                {status.accuracy ? ` · accurate to about ${Math.round(status.accuracy)} m` : ''}
+              </span>
+              {/* Changing a field the user picked has to be visible, and reversible: the City
+                  select stays editable and keeps the precise pin if they override it. */}
+              {status.cityChanged &&
+                (status.city === 'Other'
+                  ? ' · you are not near a listed city, so City is set to Other'
+                  : ` · City set to ${status.city} from your position`)}
             </span>
           )}
           {status.state === 'error' && <span className="block text-danger-700">{status.message}</span>}
