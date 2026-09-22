@@ -3,16 +3,13 @@ import mongoose from 'mongoose';
 import { Booking, Job, Message, Offer, WorkerProfile } from '../models/index.js';
 import { BOOKING_STATUS, JOB_STATUS, OFFER_STATUS, ROLES } from '../constants/index.js';
 import { emitToOffer, emitToUser } from '../socket/index.js';
+import { OFFER_POPULATE, postMessage } from '../services/negotiation.service.js';
 import { ApiError } from '../utils/ApiError.js';
 import { computeEndDate } from '../utils/dates.js';
 import { recordHire } from '../services/ranking.service.js';
 
 const OPEN_JOB = [JOB_STATUS.POSTED, JOB_STATUS.NEGOTIATING];
-const POPULATE = [
-  { path: 'job', select: 'title category budget durationType durationCount startDate city status client' },
-  { path: 'worker', select: 'name avatar' },
-  { path: 'client', select: 'name avatar' },
-];
+const POPULATE = OFFER_POPULATE;
 
 const other = (role) => (role === ROLES.WORKER ? ROLES.CLIENT : ROLES.WORKER);
 
@@ -32,12 +29,6 @@ function assertMyTurn(offer, role) {
   if (offer.awaitingRole !== role) {
     throw ApiError.conflict('Waiting for the other party to respond to your latest offer');
   }
-}
-
-async function postMessage(offer, { sender = null, type, text, roundId }) {
-  const message = await Message.create({ offer: offer._id, job: offer.job, sender, type, text, roundId, readBy: sender ? [sender] : [] });
-  emitToOffer(offer._id, 'message:new', message);
-  return message;
 }
 
 function notifyBoth(offer, event, payload = offer) {
@@ -68,6 +59,10 @@ export async function createOffer(req, res) {
   const job = await Job.findById(req.valid.params.id);
   if (!job) throw ApiError.notFound('Job not found');
   if (!OPEN_JOB.includes(job.status)) throw ApiError.conflict('This job is no longer accepting offers');
+  // A direct hire is a private request to one person; nobody else may bid their way into it
+  if (job.invitedWorker && !job.invitedWorker.equals(req.user._id)) {
+    throw ApiError.forbidden('This job was sent directly to another worker');
+  }
   if (!(await WorkerProfile.exists({ user: req.user._id }))) {
     throw ApiError.badRequest('Create your worker profile before sending offers');
   }

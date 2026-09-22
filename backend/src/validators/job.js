@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { CATEGORIES, DURATION_TYPES, URGENCY } from '../constants/index.js';
-import { city, latLng, pagination } from './common.js';
+import { city, latLng, objectId, pagination } from './common.js';
 
 const startOfToday = () => {
   const d = new Date();
@@ -34,7 +34,22 @@ const jobFields = {
   address: z.string().trim().max(200).optional(),
 };
 
-export const createJobSchema = z.object(jobFields);
+/**
+ * Posting publicly and hiring one worker directly are the same job with one difference: who is
+ * allowed to bid. A direct hire names the worker and opens with the client's own figure, so the
+ * two fields only make sense together — either both or neither.
+ */
+export const createJobSchema = z
+  .object({
+    ...jobFields,
+    invitedWorker: objectId.optional(),
+    offerAmount: z.coerce.number().int().min(100, 'Offer at least PKR 100').max(10_000_000).optional(),
+    offerTerms: z.string().trim().max(1000).optional(),
+  })
+  .refine((v) => Boolean(v.invitedWorker) === (v.offerAmount !== undefined), {
+    message: 'A direct hire needs both the worker and an amount',
+    path: ['offerAmount'],
+  });
 
 export const updateJobSchema = z
   .object(jobFields)

@@ -21,9 +21,13 @@ export function RealtimeBridge() {
 
   useSocketEvent('offer:new', (offer) => {
     invalidate(['offers'], ['jobs']);
+    // Offers now open from either side: a worker bidding on a posted job, or a client hiring
+    // one worker directly. The recipient is whoever did not open it.
+    const fromClient = offer.rounds?.at(-1)?.byRole === 'client';
+    const sender = (fromClient ? offer.client?.name : offer.worker?.name) ?? (fromClient ? 'A client' : 'A worker');
     toast({
-      title: 'New offer received',
-      description: `${offer.worker?.name ?? 'A worker'} offered ${formatPKR(offer.rounds?.at(-1)?.amount)} for “${offer.job?.title ?? 'your job'}”`,
+      title: fromClient ? 'New hire request' : 'New offer received',
+      description: `${sender} offered ${formatPKR(offer.rounds?.at(-1)?.amount)} for “${offer.job?.title ?? 'your job'}”`,
       to: `/negotiations/${offer._id}`,
     });
   });

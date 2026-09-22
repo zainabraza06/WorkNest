@@ -24,6 +24,11 @@ const jobSchema = new mongoose.Schema(
     ...locationFields,
 
     status: { type: String, enum: Object.values(JOB_STATUS), default: JOB_STATUS.POSTED, index: true },
+
+    // Set when a client hires one worker directly from their profile rather than posting
+    // publicly. Such a job is not an open call: it is excluded from browse and no other worker
+    // may bid on it, so it carries a private request to exactly one person.
+    invitedWorker: { type: mongoose.Schema.Types.ObjectId, ref: 'User', index: true },
     hiredWorker: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     booking: { type: mongoose.Schema.Types.ObjectId, ref: 'Booking' },
     offersCount: { type: Number, default: 0 },

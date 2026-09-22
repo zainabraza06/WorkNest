@@ -1,9 +1,11 @@
-import { ClientProfile, Job, Offer } from '../models/index.js';
+import { ClientProfile, Job, Offer, WorkerProfile } from '../models/index.js';
 import { JOB_STATUS, OFFER_STATUS, ROLES } from '../constants/index.js';
 import { ApiError } from '../utils/ApiError.js';
 import { toPoint } from '../validators/common.js';
 import { KM_TO_RADIANS, keywordRegexFilter, paginateAggregate } from '../utils/query.js';
 import { suggestPrice } from '../services/ai.service.js';
+import { OFFER_POPULATE, postMessage } from '../services/negotiation.service.js';
+import { emitToUser } from '../socket/index.js';
 
 const OPEN_STATUSES = [JOB_STATUS.POSTED, JOB_STATUS.NEGOTIATING];
 const EDITABLE_STATUSES = OPEN_STATUSES;
@@ -22,7 +24,14 @@ async function getOwnedJob(jobId, userId) {
 }
 
 export async function createJob(req, res) {
-  const body = req.valid.body;
+  const { invitedWorker, offerAmount, offerTerms, ...body } = req.valid.body;
+
+  // A direct hire goes to one named worker, so check they exist and can actually be hired
+  // before creating a job that would otherwise sit addressed to nobody.
+  if (invitedWorker) {
+    if (req.user._id.equals(invitedWorker)) throw ApiError.badRequest('You cannot hire yourself');
+    if (!(await WorkerProfile.exists({ user: invitedWorker }))) throw ApiError.notFound('Worker not found');
+  }
 
   // Best-effort fair-price snapshot stored with the job; null when the AI service is unavailable
   const suggested = await suggestPrice(body);
@@ -30,6 +39,7 @@ export async function createJob(req, res) {
   const job = await Job.create({
     ...toModelFields(body),
     client: req.user._id,
+    ...(invitedWorker && { invitedWorker, status: JOB_STATUS.NEGOTIATING, offersCount: 1 }),
     ...(suggested && {
       suggestedPrice: { min: suggested.min, max: suggested.max, median: suggested.median, source: suggested.source },
     }),
@@ -40,6 +50,37 @@ export async function createJob(req, res) {
     { $inc: { 'stats.jobsPosted': 1 }, $push: { jobHistory: job._id } },
   );
 
+  // The request itself is an offer — the client's opening round, waiting on the worker. It uses
+  // the same negotiation the worker-led flow uses, so the worker can accept it or counter it
+  // without a second mechanism existing for the same conversation.
+  if (invitedWorker) {
+    const offer = await Offer.create({
+      job: job._id,
+      worker: invitedWorker,
+      client: req.user._id,
+      awaitingRole: ROLES.WORKER,
+      rounds: [
+        {
+          by: req.user._id,
+          byRole: ROLES.CLIENT,
+          amount: offerAmount,
+          durationType: job.durationType,
+          durationCount: job.durationCount,
+          startDate: job.startDate,
+          terms: offerTerms,
+        },
+      ],
+    });
+
+    await postMessage(offer, { sender: req.user._id, type: 'offer', text: offerTerms, roundId: offer.rounds[0]._id });
+
+    // Same populated shape the client receives for a worker's bid, so one client handles both
+    await offer.populate(OFFER_POPULATE);
+    emitToUser(invitedWorker, 'offer:new', offer);
+
+    return res.status(201).json({ success: true, data: { ...job.toJSON(), offer: offer.toJSON() } });
+  }
+
   res.status(201).json({ success: true, data: job });
 }
 
@@ -47,7 +88,8 @@ export async function listJobs(req, res) {
   const { q, category, city, durationType, urgency, minBudget, maxBudget, lat, lng, radiusKm, sort, page, limit } =
     req.valid.query;
 
-  const filter = { status: { $in: OPEN_STATUSES } };
+  // A direct hire is addressed to one worker, not an open call — it never appears in browse
+  const filter = { status: { $in: OPEN_STATUSES }, invitedWorker: { $exists: false } };
   if (category?.length) filter.category = { $in: category };
   if (durationType?.length) filter.durationType = { $in: durationType };
   if (city) filter.city = city;

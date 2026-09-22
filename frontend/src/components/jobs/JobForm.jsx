@@ -11,9 +11,12 @@ import { InlineAlert } from '@/components/ui/States';
 import { focusFirstErrorSoon } from '@/lib/focusFirstError';
 import { CATEGORIES, CATEGORY_MAP, DURATION_MAP, DURATION_TYPES, URGENCY } from '@/lib/constants';
 import { cn } from '@/lib/cn';
-import { formatBudget, formatDate, formatDuration } from '@/lib/format';
+import { formatBudget, formatDate, formatDuration, formatPKR } from '@/lib/format';
 
 const STEPS = ['The job', 'Timing', 'Location', 'Budget'];
+// Hiring one worker is the same four steps, except the last one is a figure you are offering
+// that person rather than a range you are advertising to a market.
+const HIRE_STEPS = ['The job', 'Timing', 'Location', 'Your offer'];
 
 const todayISO = () => {
   const d = new Date();
@@ -37,10 +40,13 @@ export function initialJobForm({ job, clientProfile, defaults = {} }) {
     },
     budgetMin: job?.budget?.min ?? '',
     budgetMax: job?.budget?.max ?? '',
+    // Direct hire only: a single figure, prefilled from the worker's own rate
+    offerAmount: defaults.offerAmount ?? '',
+    offerTerms: '',
   };
 }
 
-function validateStep(step, f) {
+function validateStep(step, f, hiring) {
   const e = {};
   if (step === 0) {
     if (f.title.trim().length < 5) e.title = 'Give the job a short title (at least 5 characters)';
@@ -54,20 +60,25 @@ function validateStep(step, f) {
   }
   if (step === 2 && (!f.place.city || !f.place.location)) e.city = 'Select the city where the work is';
   if (step === 3) {
-    if (!(Number(f.budgetMin) >= 100)) e['budget.min'] = 'Minimum budget is Rs 100';
-    if (!(Number(f.budgetMax) >= Number(f.budgetMin))) e['budget.max'] = 'Maximum must be at least the minimum';
+    if (hiring) {
+      if (!(Number(f.offerAmount) >= 100)) e.offerAmount = 'Offer at least Rs 100';
+    } else {
+      if (!(Number(f.budgetMin) >= 100)) e['budget.min'] = 'Minimum budget is Rs 100';
+      if (!(Number(f.budgetMax) >= Number(f.budgetMin))) e['budget.max'] = 'Maximum must be at least the minimum';
+    }
   }
   return e;
 }
 
 // Which step owns each server-side field, so a server error can send the user back to the right step
-const FIELD_STEP = { title: 0, category: 0, description: 0, skills: 0, durationType: 1, durationCount: 1, startDate: 1, urgency: 1, city: 2, location: 2, address: 2, 'budget.min': 3, 'budget.max': 3 };
+const FIELD_STEP = { title: 0, category: 0, description: 0, skills: 0, durationType: 1, durationCount: 1, startDate: 1, urgency: 1, city: 2, location: 2, address: 2, 'budget.min': 3, 'budget.max': 3, offerAmount: 3 };
 
 /**
  * Progressive multi-step job form. `renderBudgetAside` lets the page inject
  * the AI fair-price suggestion next to the budget inputs.
  */
-export function JobForm({ initial, onSubmit, submitting, serverError, submitLabel = 'Post job', renderBudgetAside }) {
+/** `hiring` is the worker being hired directly; null means an open job post. */
+export function JobForm({ initial, onSubmit, submitting, serverError, submitLabel = 'Post job', renderBudgetAside, hiring = null }) {
   const [form, setForm] = useState(initial);
   const [step, setStep] = useState(0);
   const [errors, setErrors] = useState({});
@@ -76,11 +87,12 @@ export function JobForm({ initial, onSubmit, submitting, serverError, submitLabe
 
   const allErrors = { ...(serverError?.fieldErrors ?? {}), ...errors };
   const unit = DURATION_MAP[form.durationType];
-  const isLast = step === STEPS.length - 1;
+  const steps = hiring ? HIRE_STEPS : STEPS;
+  const isLast = step === steps.length - 1;
 
   const next = (e) => {
     e.preventDefault();
-    const found = validateStep(step, form);
+    const found = validateStep(step, form, hiring);
     setErrors(found);
     if (Object.keys(found).length) {
       focusFirstErrorSoon(formRef.current);
@@ -104,12 +116,21 @@ export function JobForm({ initial, onSubmit, submitting, serverError, submitLabe
         city: form.place.city,
         address: form.place.address || undefined,
         location: form.place.location,
-        budget: { min: Number(form.budgetMin), max: Number(form.budgetMax) },
+        // A direct hire names one figure, so the job's range is that figure rather than a
+        // spread advertised to a market that is not being invited.
+        ...(hiring
+          ? {
+              budget: { min: Number(form.offerAmount), max: Number(form.offerAmount) },
+              invitedWorker: hiring.user._id,
+              offerAmount: Number(form.offerAmount),
+              offerTerms: form.offerTerms.trim() || undefined,
+            }
+          : { budget: { min: Number(form.budgetMin), max: Number(form.budgetMax) } }),
       },
       {
         onFieldError: (fieldErrors) => {
-          const steps = Object.keys(fieldErrors).map((k) => FIELD_STEP[k]).filter((s) => s !== undefined);
-          if (steps.length) setStep(Math.min(...steps));
+          const owning = Object.keys(fieldErrors).map((k) => FIELD_STEP[k]).filter((s) => s !== undefined);
+          if (owning.length) setStep(Math.min(...owning));
         },
       },
     );
@@ -119,7 +140,7 @@ export function JobForm({ initial, onSubmit, submitting, serverError, submitLabe
     <form ref={formRef} onSubmit={next} noValidate className="flex flex-col gap-5">
       {/* Progress */}
       <ol className="grid grid-cols-4 gap-2" aria-label="Progress">
-        {STEPS.map((label, i) => (
+        {steps.map((label, i) => (
           <li key={label} aria-current={i === step ? 'step' : undefined}>
             <div className={cn('h-0.5 transition-colors', i <= step ? 'bg-primary-500' : 'bg-ink-200')} />
             <p className={cn('mt-1.5 flex items-center gap-1 text-xs font-medium', i === step ? 'text-ink-900' : 'text-ink-500')}>
@@ -182,16 +203,45 @@ export function JobForm({ initial, onSubmit, submitting, serverError, submitLabe
 
           {step === 3 && (
             <>
-              <h2 className="text-xl">What's your budget?</h2>
+              <h2 className="text-xl">{hiring ? `What are you offering ${hiring.user.name.split(' ')[0]}?` : "What's your budget?"}</h2>
               <p className="-mt-3 text-sm text-ink-600">
-                Total for {formatDuration(form.durationType, Number(form.durationCount) || 1)}. Workers can send counter-offers.
+                Total for {formatDuration(form.durationType, Number(form.durationCount) || 1)}.{' '}
+                {hiring
+                  ? `${hiring.user.name.split(' ')[0]} can accept this or counter with their own figure.`
+                  : 'Workers can send counter-offers.'}
               </p>
               <div className="grid gap-5 md:grid-cols-[1fr_260px]">
-                <div className="grid grid-cols-2 gap-4 self-start">
-                  <Input label="Minimum" type="number" inputMode="numeric" min={100} step={100} required leading="Rs" value={form.budgetMin} onChange={(e) => set({ budgetMin: e.target.value })} error={allErrors['budget.min']} />
-                  <Input label="Maximum" type="number" inputMode="numeric" min={100} step={100} required leading="Rs" value={form.budgetMax} onChange={(e) => set({ budgetMax: e.target.value })} error={allErrors['budget.max']} />
-                </div>
-                {renderBudgetAside?.(form, (min, max) => set({ budgetMin: min, budgetMax: max }))}
+                {hiring ? (
+                  <div className="flex flex-col gap-4 self-start">
+                    <Input
+                      label="Your offer"
+                      type="number"
+                      inputMode="numeric"
+                      min={100}
+                      step={100}
+                      required
+                      leading="Rs"
+                      hint={hiring.rates?.daily ? `Their listed rate is ${formatPKR(hiring.rates.daily)} per day` : undefined}
+                      value={form.offerAmount}
+                      onChange={(e) => set({ offerAmount: e.target.value })}
+                      error={allErrors.offerAmount}
+                    />
+                    <Textarea
+                      label={`Message to ${hiring.user.name.split(' ')[0]} (optional)`}
+                      rows={3}
+                      maxLength={1000}
+                      placeholder="e.g. Can you come in the morning? The materials are already here."
+                      value={form.offerTerms}
+                      onChange={(e) => set({ offerTerms: e.target.value })}
+                    />
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-4 self-start">
+                    <Input label="Minimum" type="number" inputMode="numeric" min={100} step={100} required leading="Rs" value={form.budgetMin} onChange={(e) => set({ budgetMin: e.target.value })} error={allErrors['budget.min']} />
+                    <Input label="Maximum" type="number" inputMode="numeric" min={100} step={100} required leading="Rs" value={form.budgetMax} onChange={(e) => set({ budgetMax: e.target.value })} error={allErrors['budget.max']} />
+                  </div>
+                )}
+                {renderBudgetAside?.(form, (min, max) => set(hiring ? { offerAmount: Math.round((min + max) / 2) } : { budgetMin: min, budgetMax: max }))}
               </div>
 
               <div className="rounded-lg bg-ink-100 p-4 text-sm">
@@ -207,8 +257,19 @@ export function JobForm({ initial, onSubmit, submitting, serverError, submitLabe
                   </dd>
                   <dt className="text-ink-500">Location</dt>
                   <dd>{form.place.city}</dd>
-                  <dt className="text-ink-500">Budget</dt>
-                  <dd>{form.budgetMin && form.budgetMax ? formatBudget({ min: Number(form.budgetMin), max: Number(form.budgetMax) }) : '—'}</dd>
+                  {hiring ? (
+                    <>
+                      <dt className="text-ink-500">Sending to</dt>
+                      <dd className="truncate">{hiring.user.name}</dd>
+                      <dt className="text-ink-500">Your offer</dt>
+                      <dd>{form.offerAmount ? formatPKR(Number(form.offerAmount)) : '—'}</dd>
+                    </>
+                  ) : (
+                    <>
+                      <dt className="text-ink-500">Budget</dt>
+                      <dd>{form.budgetMin && form.budgetMax ? formatBudget({ min: Number(form.budgetMin), max: Number(form.budgetMax) }) : '—'}</dd>
+                    </>
+                  )}
                 </dl>
               </div>
             </>
