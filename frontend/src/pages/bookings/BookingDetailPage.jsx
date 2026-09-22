@@ -7,6 +7,7 @@ import { bookingsApi } from '@/api/negotiation';
 import { EscrowPayment } from '@/components/booking/EscrowPayment';
 import { ReviewPrompt } from '@/components/booking/ReviewPrompt';
 import { toast } from '@/components/feedback/toastStore';
+import { DisputeCase, EvidencePicker } from '@/components/booking/DisputeCase';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -36,7 +37,7 @@ function Stepper({ status }) {
   );
 }
 
-function ConfirmAction({ open, onClose, title, description, confirmLabel, variant = 'primary', mutation, withReason, reasonLabel, reasonRequired }) {
+function ConfirmAction({ open, onClose, title, description, confirmLabel, variant = 'primary', mutation, withReason, reasonLabel, reasonRequired, children }) {
   const [reason, setReason] = useState('');
   const tooShort = reasonRequired && reason.trim().length < 10;
   return (
@@ -58,6 +59,8 @@ function ConfirmAction({ open, onClose, title, description, confirmLabel, varian
     >
       {mutation.error && <InlineAlert className="mb-3">{mutation.error.message}</InlineAlert>}
       {withReason && <Textarea label={reasonLabel} required={reasonRequired} rows={3} maxLength={1000} value={reason} onChange={(e) => setReason(e.target.value)} hint={reasonRequired ? 'At least 10 characters.' : undefined} />}
+      {/* Anything extra the action needs — the dispute form uses this to attach photographs */}
+      {children && <div className="mt-4">{children}</div>}
     </Modal>
   );
 }
@@ -86,7 +89,8 @@ export default function BookingDetailPage() {
   const start = useMutation(makeAction(() => bookingsApi.start(id), 'Job started'));
   const complete = useMutation(makeAction(() => bookingsApi.complete(id), 'Job completed — payment released'));
   const cancel = useMutation(makeAction((reason) => bookingsApi.cancel(id, reason), 'Booking cancelled'));
-  const dispute = useMutation(makeAction((reason) => bookingsApi.dispute(id, reason), 'Dispute opened — our team will review it'));
+  const [evidence, setEvidence] = useState([]);
+  const dispute = useMutation(makeAction((reason) => bookingsApi.dispute(id, reason, evidence), 'Dispute opened — our team will review it'));
   const askCancel = useMutation(makeAction((reason) => bookingsApi.requestCancellation(id, reason), 'Cancellation requested'));
   const acceptCancel = useMutation(makeAction(() => bookingsApi.answerCancellation(id, true), 'Booking cancelled and payment refunded'));
   const declineCancel = useMutation(makeAction((reason) => bookingsApi.answerCancellation(id, false, reason), 'Request declined — the booking is now in dispute'));
@@ -169,7 +173,13 @@ export default function BookingDetailPage() {
           </CardBody>
         </Card>
       )}
-      {b.status === 'disputed' && (
+      {b.dispute?.statements?.length > 0 && (
+        <div className="mb-5">
+          <DisputeCase booking={b} canRespond={b.status === 'disputed'} />
+        </div>
+      )}
+
+      {b.status === 'disputed' && !b.dispute?.statements?.length && (
         <InlineAlert tone="warning" className="mb-5">
           A dispute is open on this booking. Payment stays in escrow until it is resolved.
         </InlineAlert>
@@ -411,7 +421,9 @@ export default function BookingDetailPage() {
         withReason
         reasonLabel="What went wrong?"
         reasonRequired
-      />
+      >
+        <EvidencePicker files={evidence} onChange={setEvidence} disabled={dispute.isPending} />
+      </ConfirmAction>
     </div>
   );
 }

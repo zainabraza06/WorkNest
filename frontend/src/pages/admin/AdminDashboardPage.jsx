@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BadgeCheck, Banknote, Gavel, Inbox, ShieldCheck } from 'lucide-react';
 
 import { adminApi, earningsApi } from '@/api';
+import { bookingsApi, offersApi } from '@/api/negotiation';
 import { toast } from '@/components/feedback/toastStore';
 import { Avatar } from '@/components/ui/Avatar';
 import { Badge } from '@/components/ui/Badge';
@@ -199,10 +200,90 @@ function VerificationQueue() {
   );
 }
 
+
+/**
+ * Everything an admin should read before deciding where the money goes: each side's statement
+ * with its photographs, and the conversation that led to the booking. Fetched only when the
+ * case is opened — a queue of ten should not pull ten threads nobody looked at.
+ */
+function CaseFile({ bookingId }) {
+  const booking = useQuery({ queryKey: ['admin', 'dispute', bookingId], queryFn: () => bookingsApi.get(bookingId) });
+  const offerId = booking.data?.offer;
+  const thread = useQuery({
+    queryKey: ['admin', 'thread', offerId],
+    queryFn: () => offersApi.messages(offerId, { limit: 50 }),
+    enabled: Boolean(offerId),
+  });
+
+  if (booking.isPending) return <Skeleton className="h-32 w-full" />;
+  if (booking.isError) return <InlineAlert tone="danger">Could not load the case: {booking.error.message}</InlineAlert>;
+
+  const statements = booking.data.dispute?.statements ?? [];
+  const messages = thread.data?.items ?? [];
+
+  return (
+    <div className="space-y-5 rounded-md border border-ink-200 bg-ink-50 p-4">
+      <div>
+        <p className="text-xs font-semibold tracking-wide text-ink-500 uppercase">Statements</p>
+        {statements.length ? (
+          <ul className="mt-2 space-y-3">
+            {statements.map((st, i) => (
+              <li key={st._id ?? i} className="rounded-md border border-ink-200 bg-white p-3">
+                <p className="text-sm font-semibold capitalize">
+                  {st.byRole}
+                  <span className="ml-2 font-normal text-ink-500">{timeAgo(st.at)}</span>
+                </p>
+                <p className="mt-1 text-sm whitespace-pre-line text-ink-700">{st.text}</p>
+                {st.evidence?.length > 0 && (
+                  <ul className="mt-2 flex flex-wrap gap-2">
+                    {st.evidence.map((img) => (
+                      <li key={img.publicId}>
+                        <a href={img.url} target="_blank" rel="noreferrer">
+                          <img src={img.url} alt="Evidence" className="size-20 rounded border border-ink-200 object-cover hover:opacity-80" />
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-1 text-sm text-ink-600">No statements were recorded — this dispute predates the case file.</p>
+        )}
+        {statements.length === 1 && (
+          <p className="mt-2 text-xs text-warning-700">
+            Only one side has spoken. Consider waiting for the other before deciding.
+          </p>
+        )}
+      </div>
+
+      <div>
+        <p className="text-xs font-semibold tracking-wide text-ink-500 uppercase">Their conversation</p>
+        {thread.isPending && <Skeleton className="mt-2 h-20 w-full" />}
+        {messages.length ? (
+          <ul className="mt-2 max-h-64 space-y-1.5 overflow-y-auto">
+            {messages.map((m) => (
+              <li key={m._id} className="text-sm">
+                <span className="text-ink-500">{m.type === 'system' ? '·' : '—'}</span>{' '}
+                <span className={m.type === 'system' ? 'text-ink-500 italic' : 'text-ink-700'}>{m.text}</span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          !thread.isPending && <p className="mt-1 text-sm text-ink-600">Nothing was said in the thread.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function DisputeQueue() {
   const qc = useQueryClient();
   const [page, setPage] = useState(1);
   const [resolving, setResolving] = useState(null);
+  const [notes, setNotes] = useState({}); // the reason for each decision, keyed by booking
+  const [open, setOpen] = useState(null); // which case file is expanded
 
   const query = useQuery({
     queryKey: ['admin', 'disputes', page],
@@ -210,7 +291,7 @@ function DisputeQueue() {
   });
 
   const resolve = useMutation({
-    mutationFn: ({ id, outcome }) => adminApi.resolveDispute(id, outcome),
+    mutationFn: ({ id, outcome }) => adminApi.resolveDispute(id, outcome, notes[id]),
     onMutate: ({ id, outcome }) => setResolving(`${id}:${outcome}`),
     onSettled: () => setResolving(null),
     onSuccess: (_res, { outcome }) => {
@@ -263,15 +344,28 @@ function DisputeQueue() {
                   <div><dt className="text-xs text-ink-500">Payment</dt><dd className="capitalize">{d.payment?.status ?? 'none'}</dd></div>
                 </dl>
 
+                {open === d._id ? <CaseFile bookingId={d._id} /> : null}
+
                 <InlineAlert tone="warning">
                   Releasing pays the worker and marks the booking completed. Refunding cancels the payment and
                   returns the money to the client. Neither can be undone from here.
                 </InlineAlert>
 
-                <div className="flex flex-wrap justify-end gap-2">
+                <Input
+                  label="Reason for your decision"
+                  hint="Both the client and the worker will read this. Required."
+                  value={notes[d._id] ?? ''}
+                  onChange={(e) => setNotes((n) => ({ ...n, [d._id]: e.target.value }))}
+                />
+
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setOpen(open === d._id ? null : d._id)}>
+                    {open === d._id ? 'Hide evidence' : 'Review evidence'}
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
+                    disabled={(notes[d._id] ?? '').trim().length < 10}
                     loading={resolving === `${d._id}:refund`}
                     onClick={() => resolve.mutate({ id: d._id, outcome: 'refund' })}
                   >
@@ -279,6 +373,7 @@ function DisputeQueue() {
                   </Button>
                   <Button
                     size="sm"
+                    disabled={(notes[d._id] ?? '').trim().length < 10}
                     loading={resolving === `${d._id}:release`}
                     onClick={() => resolve.mutate({ id: d._id, outcome: 'release' })}
                   >

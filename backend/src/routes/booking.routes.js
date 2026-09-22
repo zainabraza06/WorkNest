@@ -4,12 +4,14 @@ import * as bookings from '../controllers/booking.controller.js';
 import { ROLES } from '../constants/index.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
+import { uploadImages } from '../middleware/upload.js';
 import { idParam } from '../validators/common.js';
 import {
   bookingReasonSchema,
   cancellationRequestSchema,
   cancellationResponseSchema,
   disputeSchema,
+  disputeStatementSchema,
   listBookingsQuery,
   resolveDisputeSchema,
 } from '../validators/booking.js';
@@ -34,7 +36,14 @@ router.post('/:id/cancel', validate({ ...byId, body: bookingReasonSchema }), boo
 router.post('/:id/cancellation', validate({ ...byId, body: cancellationRequestSchema }), bookings.requestCancellation);
 router.post('/:id/cancellation/respond', validate({ ...byId, body: cancellationResponseSchema }), bookings.respondToCancellation);
 
-router.post('/:id/dispute', validate({ ...byId, body: disputeSchema }), bookings.disputeBooking);
+// Statements carry photographs, so these two take multipart rather than JSON
+router.post('/:id/dispute', uploadImages('evidence', 5), validate({ ...byId, body: disputeSchema }), bookings.disputeBooking);
+router.post(
+  '/:id/dispute/statements',
+  uploadImages('evidence', 5),
+  validate({ ...byId, body: disputeStatementSchema }),
+  bookings.addDisputeStatement,
+);
 router.post('/:id/resolve', requireRole(ROLES.ADMIN), validate({ ...byId, body: resolveDisputeSchema }), bookings.resolveDispute);
 
 // Both sides review each other after a completed booking

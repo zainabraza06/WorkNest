@@ -15,12 +15,17 @@ const POPULATE = OFFER_POPULATE;
 const other = (role) => (role === ROLES.WORKER ? ROLES.CLIENT : ROLES.WORKER);
 const rs = (n) => `Rs ${Number(n).toLocaleString('en-PK')}`;
 
-async function loadParticipantOffer(offerId, user) {
+/**
+ * @param allowAdmin  admins read threads they are not part of, because the conversation is the
+ *                    evidence in a dispute. They get a null role, so every guard that asks
+ *                    "is it my turn" still refuses them — they can read, not negotiate.
+ */
+async function loadParticipantOffer(offerId, user, { allowAdmin = false } = {}) {
   const offer = await Offer.findById(offerId);
   if (!offer) throw ApiError.notFound('Negotiation not found');
   const role = offer.worker.equals(user._id) ? ROLES.WORKER : offer.client.equals(user._id) ? ROLES.CLIENT : null;
   // 404 rather than 403 so thread ids can't be probed
-  if (!role) throw ApiError.notFound('Negotiation not found');
+  if (!role && !(allowAdmin && user.role === ROLES.ADMIN)) throw ApiError.notFound('Negotiation not found');
   return { offer, role };
 }
 
@@ -151,7 +156,7 @@ export async function listOffers(req, res) {
 }
 
 export async function getOffer(req, res) {
-  const { offer, role } = await loadParticipantOffer(req.valid.params.id, req.user);
+  const { offer, role } = await loadParticipantOffer(req.valid.params.id, req.user, { allowAdmin: true });
   await offer.populate(POPULATE);
 
   const [profile, booking] = await Promise.all([
@@ -337,7 +342,7 @@ export const withdrawOffer = (req, res) =>
   closeWithStatus(req, res, { status: OFFER_STATUS.WITHDRAWN, allowedRole: ROLES.WORKER, systemText: 'The worker withdrew their offer.' });
 
 export async function listMessages(req, res) {
-  const { offer } = await loadParticipantOffer(req.valid.params.id, req.user);
+  const { offer } = await loadParticipantOffer(req.valid.params.id, req.user, { allowAdmin: true });
   const { before, limit } = req.valid.query;
   const filter = { offer: offer._id, ...(before && { createdAt: { $lt: before } }) };
 

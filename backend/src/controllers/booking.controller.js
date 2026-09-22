@@ -2,6 +2,7 @@ import { Booking, Job, Offer, Payment, WorkerProfile } from '../models/index.js'
 import { BOOKING_STATUS, JOB_STATUS, OFFER_STATUS, PAYMENT_STATUS, PLATFORM_FEE_RATE, ROLES } from '../constants/index.js';
 import { ApiError } from '../utils/ApiError.js';
 import * as payments from '../services/payment.service.js';
+import { IMAGE_TRANSFORMS, uploadBuffer } from '../services/upload.service.js';
 import { notify } from '../services/notification.service.js';
 import {
   applyIntentStatus,
@@ -304,20 +305,71 @@ export async function respondToCancellation(req, res) {
   await respond(res, booking, role);
 }
 
+/** Photographs attached to a statement. Both parties and the admin may see them. */
+async function uploadEvidence(files = []) {
+  if (!files.length) return [];
+  return Promise.all(
+    files.map((f) => uploadBuffer(f.buffer, { folder: 'disputes', transformation: IMAGE_TRANSFORMS.portfolio })),
+  );
+}
+
 export async function disputeBooking(req, res) {
   const { booking, role } = await loadParticipantBooking(req.valid.params.id, req.user);
   if (role !== ROLES.CLIENT) throw ApiError.forbidden('Only the client can open a dispute');
   assertStatus(booking, [BOOKING_STATUS.IN_PROGRESS], 'dispute');
 
+  const evidence = await uploadEvidence(req.files);
+  booking.dispute = {
+    openedBy: req.user._id,
+    openedAt: new Date(),
+    statements: [{ by: req.user._id, byRole: role, text: req.valid.body.reason, evidence }],
+  };
+
   pushTimeline(booking, BOOKING_STATUS.DISPUTED, req.user._id, req.valid.body.reason);
   await booking.save();
   await recordDispute(booking);
+
+  // The other side has to know a case has been opened against them, and be able to answer it
+  await notify(booking.worker, {
+    type: 'dispute_opened',
+    title: 'A dispute was opened on your booking',
+    body: 'Add your side of the story and any photos before it is decided.',
+    link: `/bookings/${booking._id}`,
+  });
 
   notifyBooking(booking);
   await respond(res, booking, role);
 }
 
 /** Admin resolves a dispute by releasing funds to the worker or refunding the client. */
+/**
+ * Either party adding to the case while it is open.
+ *
+ * Deciding who gets the money on one sentence from one side is not a judgement. The worker in
+ * particular had no way to answer at all — a dispute was opened against them and the next thing
+ * that happened was an admin taking the money away or handing it over.
+ */
+export async function addDisputeStatement(req, res) {
+  const { booking, role } = await loadParticipantBooking(req.valid.params.id, req.user);
+  if (!role) throw ApiError.forbidden('Only the client and the worker can add to a dispute');
+  assertStatus(booking, [BOOKING_STATUS.DISPUTED], 'add a statement to');
+
+  const evidence = await uploadEvidence(req.files);
+  booking.dispute.statements.push({ by: req.user._id, byRole: role, text: req.valid.body.text, evidence });
+  await booking.save();
+
+  const other = role === ROLES.WORKER ? booking.client : booking.worker;
+  notifyBooking(booking);
+  await notify(other, {
+    type: 'dispute_statement',
+    title: `${req.user.name} responded to the dispute`,
+    body: req.valid.body.text.slice(0, 160),
+    link: `/bookings/${booking._id}`,
+  });
+
+  await respond(res, booking, role);
+}
+
 export async function resolveDispute(req, res) {
   const { booking } = await loadParticipantBooking(req.valid.params.id, req.user);
   assertStatus(booking, [BOOKING_STATUS.DISPUTED], 'resolve');
@@ -334,6 +386,12 @@ export async function resolveDispute(req, res) {
     }
     await payment.save();
   }
+
+  // Kept on the booking, not only in the timeline, so both sides can see who decided and why
+  booking.dispute = {
+    ...(booking.dispute?.toJSON?.() ?? booking.dispute ?? {}),
+    resolution: { outcome, note, by: req.user._id, at: new Date() },
+  };
 
   if (outcome === 'release') {
     pushTimeline(booking, BOOKING_STATUS.COMPLETED, req.user._id, note ?? 'Dispute resolved in favour of worker');

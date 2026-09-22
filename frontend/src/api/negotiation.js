@@ -2,6 +2,14 @@ import { api, unwrap } from '@/lib/api';
 
 const clean = (params = {}) => Object.fromEntries(Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== ''));
 
+/** Text fields plus any number of photographs, as the dispute endpoints expect them. */
+const toEvidenceForm = (fields, files) => {
+  const fd = new FormData();
+  for (const [k, v] of Object.entries(fields)) if (v !== undefined) fd.append(k, v);
+  for (const f of files) fd.append('evidence', f);
+  return fd;
+};
+
 export const offersApi = {
   create: (jobId, body) => unwrap(api.post(`/jobs/${jobId}/offers`, body)),
   list: (params) => unwrap(api.get('/offers', { params: clean(params) })),
@@ -23,7 +31,11 @@ export const bookingsApi = {
   start: (id) => unwrap(api.post(`/bookings/${id}/start`)),
   complete: (id) => unwrap(api.post(`/bookings/${id}/complete`)),
   cancel: (id, reason) => unwrap(api.post(`/bookings/${id}/cancel`, { reason })),
-  dispute: (id, reason) => unwrap(api.post(`/bookings/${id}/dispute`, { reason })),
+  // Multipart: a statement may carry photographs of the work
+  dispute: (id, reason, evidence = []) => unwrap(api.post(`/bookings/${id}/dispute`, toEvidenceForm({ reason }, evidence))),
+  addStatement: (id, text, evidence = []) =>
+    unwrap(api.post(`/bookings/${id}/dispute/statements`, toEvidenceForm({ text }, evidence))),
+  resolve: (id, outcome, note) => unwrap(api.post(`/bookings/${id}/resolve`, { outcome, note })),
   // Work already under way takes both sides to call off
   requestCancellation: (id, reason) => unwrap(api.post(`/bookings/${id}/cancellation`, { reason })),
   answerCancellation: (id, accept, reason) => unwrap(api.post(`/bookings/${id}/cancellation/respond`, { accept, reason })),

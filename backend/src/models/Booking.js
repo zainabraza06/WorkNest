@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { BOOKING_STATUS, DURATION_TYPES, ROLES } from '../constants/index.js';
+import { imageSchema } from './shared.js';
 
 const timelineEntrySchema = new mongoose.Schema(
   {
@@ -40,6 +41,38 @@ const bookingSchema = new mongoose.Schema(
     completedAt: Date,
     cancelledAt: Date,
     cancellationReason: String,
+
+    /**
+     * The case an admin decides on.
+     *
+     * A dispute used to carry one sentence from the client, and the admin chose who got the
+     * money from that alone — the worker was never asked and there was nothing to look at. Both
+     * sides now state their case and attach photographs, and the decision is recorded with a
+     * reason both of them can read.
+     *
+     * Evidence is stored as ordinary Cloudinary images rather than signed private assets: these
+     * are photographs of work, not identity documents, and both parties plus the admin are
+     * entitled to see them.
+     */
+    dispute: {
+      openedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      openedAt: Date,
+      statements: [
+        {
+          by: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+          byRole: { type: String, enum: [ROLES.WORKER, ROLES.CLIENT], required: true },
+          text: { type: String, trim: true, maxlength: 2000, required: true },
+          evidence: [imageSchema],
+          at: { type: Date, default: Date.now },
+        },
+      ],
+      resolution: {
+        outcome: { type: String, enum: ['release', 'refund'] },
+        note: { type: String, trim: true, maxlength: 1000 },
+        by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+        at: Date,
+      },
+    },
 
     /**
      * Work that has started cannot be called off by one side alone: the other party has
