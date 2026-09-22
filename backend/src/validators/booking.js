@@ -19,6 +19,16 @@ export const disputeSchema = z.object({
   reason: z.string().trim().min(10, 'Please explain the problem in at least 10 characters').max(1000),
 });
 
+/** Asking to call off started work: a reason is required, because the other side must judge it. */
+export const cancellationRequestSchema = z.object({
+  reason: z.string().trim().min(10, 'Explain why in at least 10 characters').max(300),
+});
+
+export const cancellationResponseSchema = z.object({
+  accept: z.boolean(),
+  reason: z.string().trim().max(300).optional(),
+});
+
 export const resolveDisputeSchema = z.object({
   outcome: z.enum(['release', 'refund']),
   note: z.string().trim().max(300).optional(),

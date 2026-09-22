@@ -2,6 +2,7 @@ import { Booking, Job, Offer, Payment, WorkerProfile } from '../models/index.js'
 import { BOOKING_STATUS, JOB_STATUS, OFFER_STATUS, PAYMENT_STATUS, PLATFORM_FEE_RATE, ROLES } from '../constants/index.js';
 import { ApiError } from '../utils/ApiError.js';
 import * as payments from '../services/payment.service.js';
+import { notify } from '../services/notification.service.js';
 import {
   applyIntentStatus,
   findPayment,
@@ -177,10 +178,14 @@ export async function completeBooking(req, res) {
   await respond(res, booking, role);
 }
 
-export async function cancelBooking(req, res) {
-  const { booking, role } = await loadParticipantBooking(req.valid.params.id, req.user);
-  assertStatus(booking, [BOOKING_STATUS.PENDING_PAYMENT, BOOKING_STATUS.CONFIRMED], 'cancel');
-
+/**
+ * Void any money still on the hook and close the booking.
+ *
+ * Shared by the unilateral cancel (before work starts) and an agreed cancellation of work in
+ * progress, so the money is released identically whichever route got here. Nothing was ever
+ * captured -- escrow holds an authorisation -- so this voids it rather than reversing a charge.
+ */
+async function refundAndClose(booking, { by, byRole, reason }) {
   const payment = await findPayment(booking);
   if (payment?.providerPaymentId && [PAYMENT_STATUS.HELD, PAYMENT_STATUS.REQUIRES_PAYMENT, PAYMENT_STATUS.FAILED].includes(payment.status)) {
     await payments.cancelIntent(payment.providerPaymentId);
@@ -190,16 +195,15 @@ export async function cancelBooking(req, res) {
     await payment.save();
   }
 
-  const wasConfirmed = booking.status === BOOKING_STATUS.CONFIRMED;
-  const reason = req.valid.body.reason;
-  pushTimeline(booking, BOOKING_STATUS.CANCELLED, req.user._id, reason);
+  const wasCommitted = [BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.IN_PROGRESS].includes(booking.status);
+  pushTimeline(booking, BOOKING_STATUS.CANCELLED, by, reason);
   booking.cancelledAt = new Date();
   booking.cancellationReason = reason;
   await booking.save();
 
-  if (role === ROLES.WORKER) {
-    // Worker backed out: reopen the job so the client can hire someone else
-    if (wasConfirmed) await recordWorkerCancellation(booking);
+  if (byRole === ROLES.WORKER) {
+    // The worker backed out: reopen the job so the client can hire someone else
+    if (wasCommitted) await recordWorkerCancellation(booking);
     await Offer.updateOne({ _id: booking.offer }, { status: OFFER_STATUS.WITHDRAWN });
     await Offer.updateMany({ job: booking.job, status: OFFER_STATUS.CLOSED }, { status: OFFER_STATUS.PENDING, awaitingRole: ROLES.CLIENT });
     const reopened = await Offer.exists({ job: booking.job, status: OFFER_STATUS.PENDING });
@@ -212,6 +216,91 @@ export async function cancelBooking(req, res) {
   }
 
   notifyBooking(booking);
+}
+
+export async function cancelBooking(req, res) {
+  const { booking, role } = await loadParticipantBooking(req.valid.params.id, req.user);
+  // Once work is under way the other side has committed time or money, so it takes both of
+  // them to call it off -- see requestCancellation.
+  assertStatus(booking, [BOOKING_STATUS.PENDING_PAYMENT, BOOKING_STATUS.CONFIRMED], 'cancel');
+
+  await refundAndClose(booking, { by: req.user._id, byRole: role, reason: req.valid.body.reason });
+  await respond(res, booking, role);
+}
+
+/**
+ * Ask the other party to call off work that has already started.
+ *
+ * Neither side may simply walk away at this point: the worker may have travelled and bought
+ * materials, and the client's money is held against a job they expect done. So this is a
+ * request, and the answer to it decides what happens to the money.
+ */
+export async function requestCancellation(req, res) {
+  const { booking, role } = await loadParticipantBooking(req.valid.params.id, req.user);
+  assertStatus(booking, [BOOKING_STATUS.IN_PROGRESS], 'request cancellation of');
+  if (booking.cancellationRequest?.status === 'pending') {
+    throw ApiError.conflict('A cancellation request is already waiting for an answer');
+  }
+
+  const { reason } = req.valid.body;
+  booking.cancellationRequest = { by: req.user._id, byRole: role, reason, status: 'pending', requestedAt: new Date() };
+  pushTimeline(booking, BOOKING_STATUS.IN_PROGRESS, req.user._id, `Cancellation requested: ${reason}`);
+  await booking.save();
+
+  notifyBooking(booking);
+  await notify(role === ROLES.WORKER ? booking.client : booking.worker, {
+    type: 'cancellation_requested',
+    title: `${req.user.name} asked to cancel this booking`,
+    body: reason,
+    link: `/bookings/${booking._id}`,
+  });
+
+  await respond(res, booking, role);
+}
+
+/**
+ * Answer a cancellation request.
+ *
+ * Accepting refunds the client in full and closes the booking. Declining does not force the
+ * work to continue -- it moves the booking to a dispute, where an admin decides who the held
+ * money belongs to. That is what holding it was for.
+ */
+export async function respondToCancellation(req, res) {
+  const { booking, role } = await loadParticipantBooking(req.valid.params.id, req.user);
+  assertStatus(booking, [BOOKING_STATUS.IN_PROGRESS], 'respond to a cancellation on');
+
+  const request = booking.cancellationRequest;
+  if (request?.status !== 'pending') throw ApiError.conflict('There is no cancellation request to answer');
+  if (request.by.equals(req.user._id)) throw ApiError.forbidden('The other party has to answer your request');
+
+  const { accept, reason } = req.valid.body;
+  booking.cancellationRequest.status = accept ? 'accepted' : 'declined';
+  booking.cancellationRequest.respondedAt = new Date();
+  if (!accept) booking.cancellationRequest.declineReason = reason;
+
+  if (accept) {
+    // Cancelled by agreement, but attributed to whoever asked -- it was their doing
+    await refundAndClose(booking, {
+      by: req.user._id,
+      byRole: request.byRole,
+      reason: `Cancellation agreed: ${request.reason}`,
+    });
+  } else {
+    pushTimeline(booking, BOOKING_STATUS.DISPUTED, req.user._id, reason ?? 'Cancellation request declined');
+    await booking.save();
+    await recordDispute(booking);
+    notifyBooking(booking);
+  }
+
+  await notify(request.by, {
+    type: accept ? 'cancellation_accepted' : 'cancellation_declined',
+    title: accept ? 'Your cancellation was accepted' : 'Your cancellation request was declined',
+    body: accept
+      ? 'The booking is cancelled and the payment has been returned to the client.'
+      : 'The booking is now in dispute -- an admin will decide what happens to the payment.',
+    link: `/bookings/${booking._id}`,
+  });
+
   await respond(res, booking, role);
 }
 

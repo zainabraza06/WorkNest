@@ -87,6 +87,9 @@ export default function BookingDetailPage() {
   const complete = useMutation(makeAction(() => bookingsApi.complete(id), 'Job completed — payment released'));
   const cancel = useMutation(makeAction((reason) => bookingsApi.cancel(id, reason), 'Booking cancelled'));
   const dispute = useMutation(makeAction((reason) => bookingsApi.dispute(id, reason), 'Dispute opened — our team will review it'));
+  const askCancel = useMutation(makeAction((reason) => bookingsApi.requestCancellation(id, reason), 'Cancellation requested'));
+  const acceptCancel = useMutation(makeAction(() => bookingsApi.answerCancellation(id, true), 'Booking cancelled and payment refunded'));
+  const declineCancel = useMutation(makeAction((reason) => bookingsApi.answerCancellation(id, false, reason), 'Request declined — the booking is now in dispute'));
 
   if (query.isPending) {
     return (
@@ -112,6 +115,11 @@ export default function BookingDetailPage() {
   const paymentMeta = b.payment ? PAYMENT_STATUS_META[b.payment.status] : null;
   const contactRevealed = Boolean(other.phone || other.email);
   const canCancel = ['pending_payment', 'confirmed'].includes(b.status);
+  // Once work has started neither side may walk away alone: one asks, the other answers
+  const inProgress = b.status === 'in_progress';
+  const request = b.cancellationRequest;
+  const pendingRequest = request?.status === 'pending' ? request : null;
+  const iAsked = pendingRequest && pendingRequest.byRole === role;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-6 md:py-8">
@@ -126,6 +134,33 @@ export default function BookingDetailPage() {
           {meta.label}
         </Badge>
       </div>
+
+      {pendingRequest && (
+        <Card className="mb-5 border-secondary-300 bg-warning-50">
+          <CardBody>
+            <p className="font-semibold text-ink-950">
+              {iAsked ? `Waiting for ${other.name} to answer your cancellation request` : `${other.name} asked to cancel this booking`}
+            </p>
+            <p className="mt-1 text-sm text-ink-700">“{pendingRequest.reason}”</p>
+            {!iAsked && (
+              <>
+                <p className="mt-3 text-sm text-ink-600">
+                  Accepting cancels the booking and returns {formatPKR(b.agreedPrice)} to the client. Declining sends it
+                  to a dispute for our team to settle — the payment stays in escrow either way until then.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button size="sm" onClick={() => setModal('acceptCancel')}>
+                    Accept cancellation
+                  </Button>
+                  <Button size="sm" variant="outline" className="text-danger-700" onClick={() => setModal('declineCancel')}>
+                    Decline
+                  </Button>
+                </div>
+              </>
+            )}
+          </CardBody>
+        </Card>
+      )}
 
       {b.status !== 'cancelled' && b.status !== 'disputed' && (
         <Card className="mb-5">
@@ -305,6 +340,12 @@ export default function BookingDetailPage() {
               <XCircle className="size-4" aria-hidden /> Cancel booking
             </Button>
           )}
+
+          {inProgress && !pendingRequest && (
+            <Button variant="outline" className="text-danger-700" onClick={() => setModal('askCancel')}>
+              <XCircle className="size-4" aria-hidden /> Request cancellation
+            </Button>
+          )}
         </aside>
       </div>
 
@@ -327,6 +368,37 @@ export default function BookingDetailPage() {
         mutation={cancel}
         withReason
         reasonLabel="Reason (optional)"
+      />
+      <ConfirmAction
+        open={modal === 'askCancel'}
+        onClose={() => setModal(null)}
+        title="Ask to cancel this booking?"
+        description={`Work has already started, so ${other.name} has to agree. If they decline, our team decides what happens to the ${formatPKR(b.agreedPrice)} in escrow.`}
+        confirmLabel="Send request"
+        variant="danger"
+        mutation={askCancel}
+        withReason
+        reasonLabel="Why do you need to cancel?"
+        reasonRequired
+      />
+      <ConfirmAction
+        open={modal === 'acceptCancel'}
+        onClose={() => setModal(null)}
+        title="Accept the cancellation?"
+        description={`The booking will be cancelled and ${formatPKR(b.agreedPrice)} returned to the client. This can't be undone.`}
+        confirmLabel="Accept and refund"
+        mutation={acceptCancel}
+      />
+      <ConfirmAction
+        open={modal === 'declineCancel'}
+        onClose={() => setModal(null)}
+        title="Decline the cancellation?"
+        description="The booking goes to a dispute and our team decides where the escrow payment goes. The work does not continue on its own."
+        confirmLabel="Decline and dispute"
+        variant="danger"
+        mutation={declineCancel}
+        withReason
+        reasonLabel="Why are you declining?"
       />
       <ConfirmAction
         open={modal === 'dispute'}

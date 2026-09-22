@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { BOOKING_STATUS, DURATION_TYPES } from '../constants/index.js';
+import { BOOKING_STATUS, DURATION_TYPES, ROLES } from '../constants/index.js';
 
 const timelineEntrySchema = new mongoose.Schema(
   {
@@ -40,6 +40,21 @@ const bookingSchema = new mongoose.Schema(
     completedAt: Date,
     cancelledAt: Date,
     cancellationReason: String,
+
+    /**
+     * Work that has started cannot be called off by one side alone: the other party has
+     * already committed time or money to it. One side requests, the other answers, and a
+     * refusal is what sends it to a dispute for someone impartial to settle.
+     */
+    cancellationRequest: {
+      by: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      byRole: { type: String, enum: [ROLES.WORKER, ROLES.CLIENT] },
+      reason: { type: String, trim: true, maxlength: 300 },
+      status: { type: String, enum: ['pending', 'accepted', 'declined'] },
+      requestedAt: Date,
+      respondedAt: Date,
+      declineReason: { type: String, trim: true, maxlength: 300 },
+    },
 
     reviewed: {
       byClient: { type: Boolean, default: false },

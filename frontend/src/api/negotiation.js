@@ -24,6 +24,9 @@ export const bookingsApi = {
   complete: (id) => unwrap(api.post(`/bookings/${id}/complete`)),
   cancel: (id, reason) => unwrap(api.post(`/bookings/${id}/cancel`, { reason })),
   dispute: (id, reason) => unwrap(api.post(`/bookings/${id}/dispute`, { reason })),
+  // Work already under way takes both sides to call off
+  requestCancellation: (id, reason) => unwrap(api.post(`/bookings/${id}/cancellation`, { reason })),
+  answerCancellation: (id, accept, reason) => unwrap(api.post(`/bookings/${id}/cancellation/respond`, { accept, reason })),
 };
 
 export const reviewsApi = {

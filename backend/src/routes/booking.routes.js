@@ -5,7 +5,14 @@ import { ROLES } from '../constants/index.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { idParam } from '../validators/common.js';
-import { bookingReasonSchema, disputeSchema, listBookingsQuery, resolveDisputeSchema } from '../validators/booking.js';
+import {
+  bookingReasonSchema,
+  cancellationRequestSchema,
+  cancellationResponseSchema,
+  disputeSchema,
+  listBookingsQuery,
+  resolveDisputeSchema,
+} from '../validators/booking.js';
 import { createReview } from '../controllers/review.controller.js';
 import { createReviewSchema } from '../validators/review.js';
 
@@ -23,6 +30,10 @@ router.post('/:id/payment/sync', validate(byId), bookings.syncPayment);
 router.post('/:id/start', validate(byId), bookings.startBooking);
 router.post('/:id/complete', validate(byId), bookings.completeBooking);
 router.post('/:id/cancel', validate({ ...byId, body: bookingReasonSchema }), bookings.cancelBooking);
+// Work already under way cannot be called off by one side alone
+router.post('/:id/cancellation', validate({ ...byId, body: cancellationRequestSchema }), bookings.requestCancellation);
+router.post('/:id/cancellation/respond', validate({ ...byId, body: cancellationResponseSchema }), bookings.respondToCancellation);
+
 router.post('/:id/dispute', validate({ ...byId, body: disputeSchema }), bookings.disputeBooking);
 router.post('/:id/resolve', requireRole(ROLES.ADMIN), validate({ ...byId, body: resolveDisputeSchema }), bookings.resolveDispute);
 
