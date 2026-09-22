@@ -115,6 +115,10 @@ describe('requesting a withdrawal', () => {
     // Snapshotted, so changing the account later cannot rewrite where this one went
     expect(res.body.data.method.accountNumber).toBe(BANK.accountNumber);
 
+    // …but the history a worker reads back is masked, here as well as in the list endpoint
+    const history = await earnings(ctx.worker);
+    expect(history.body.data.withdrawals[0].method.accountNumber).toMatch(/^•+6702$/);
+
     const after = await earnings(ctx.worker);
     expect(after.body.data.requested).toBe(3000);
     expect(after.body.data.available).toBe(800);

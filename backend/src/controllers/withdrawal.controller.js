@@ -7,6 +7,9 @@ import { notify } from '../services/notification.service.js';
 /** Enough to recognise the account, not enough to be worth stealing off a screen. */
 const maskAccount = (n) => (n && n.length > 4 ? `${'•'.repeat(Math.min(6, n.length - 4))}${n.slice(-4)}` : n);
 
+/** A worker's own history is masked too — they confirm the full number on the payout form. */
+const masked = (w) => ({ ...w.toJSON(), method: { ...w.method.toJSON(), accountNumber: maskAccount(w.method.accountNumber) } });
+
 /** The worker's own money: balances, the payments behind them, and their withdrawal history. */
 export async function getMyEarnings(req, res) {
   const [earnings, profile, payments, withdrawals] = await Promise.all([
@@ -27,7 +30,7 @@ export async function getMyEarnings(req, res) {
       minWithdrawal: MIN_WITHDRAWAL_PKR,
       payoutMethod: profile?.payoutMethod?.type ? profile.payoutMethod : null,
       payments,
-      withdrawals,
+      withdrawals: withdrawals.map(masked),
     },
   });
 }
@@ -88,7 +91,7 @@ export async function listWithdrawals(req, res) {
   res.json({
     success: true,
     data: {
-      items: isAdmin ? items : items.map((w) => ({ ...w.toJSON(), method: { ...w.method.toJSON(), accountNumber: maskAccount(w.method.accountNumber) } })),
+      items: isAdmin ? items : items.map(masked),
       page,
       limit,
       total,
