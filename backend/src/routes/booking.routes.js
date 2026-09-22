@@ -23,7 +23,8 @@ const byId = { params: idParam() };
 
 router.use(requireAuth);
 
-router.get('/', requireRole(ROLES.WORKER, ROLES.CLIENT), validate({ query: listBookingsQuery }), bookings.listBookings);
+// Admins included: they already read any single booking, and the console links here
+router.get('/', requireRole(ROLES.WORKER, ROLES.CLIENT, ROLES.ADMIN), validate({ query: listBookingsQuery }), bookings.listBookings);
 router.get('/:id', validate(byId), bookings.getBooking);
 
 router.post('/:id/payment', validate(byId), bookings.createPayment);

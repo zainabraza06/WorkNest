@@ -187,6 +187,25 @@ describe('what the admin can see', () => {
     expect(res.status).toBe(404);
   });
 
+  it('lists every booking, not the none it is a party to', async () => {
+    const res = await api().get('/api/bookings').set(bearer(admin.token));
+    expect(res.status).toBe(200);
+    expect(res.body.data.total).toBeGreaterThan(0);
+    expect(res.body.data.items[0].worker.name).toBeDefined();
+    expect(res.body.data.items[0].client.name).toBeDefined();
+  });
+
+  it('cannot act as a party to a booking it is overseeing', async () => {
+    // Reading is the admin's business; starting, completing or cancelling someone else's work
+    // is not. loadParticipantBooking used to let them through and the client branch took over.
+    for (const path of ['start', 'complete', 'cancel']) {
+      const res = await api().post(`/api/bookings/${ctx.bookingId}/${path}`).set(bearer(admin.token)).send({ reason: 'x' });
+      expect(res.status).toBe(404);
+    }
+    const booking = await Booking.findById(ctx.bookingId);
+    expect(booking.status).toBe('disputed');
+  });
+
   it('sees both statements in the dispute queue entry', async () => {
     await api()
       .post(`/api/bookings/${ctx.bookingId}/dispute/statements`)

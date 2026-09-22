@@ -16,10 +16,16 @@ import {
 
 const REVEAL_CONTACT = [BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.IN_PROGRESS, BOOKING_STATUS.COMPLETED, BOOKING_STATUS.DISPUTED];
 
-async function loadParticipantBooking(id, user) {
+/**
+ * @param allowAdmin  only for reading and for resolving a dispute. An admin is not a party to
+ *                    the booking, so they arrive with a null role — and every handler that acts
+ *                    *as* a party must refuse them outright rather than fall through to the
+ *                    client branch, which would let an admin cancel or start anyone's work.
+ */
+async function loadParticipantBooking(id, user, { allowAdmin = false } = {}) {
   const booking = await Booking.findById(id);
   const role = booking?.worker.equals(user._id) ? ROLES.WORKER : booking?.client.equals(user._id) ? ROLES.CLIENT : null;
-  if (!booking || (!role && user.role !== ROLES.ADMIN)) throw ApiError.notFound('Booking not found');
+  if (!booking || (!role && !(allowAdmin && user.role === ROLES.ADMIN))) throw ApiError.notFound('Booking not found');
   return { booking, role };
 }
 
@@ -56,7 +62,16 @@ async function respond(res, booking, role, status = 200) {
 
 export async function listBookings(req, res) {
   const { status, page, limit } = req.valid.query;
-  const filter = req.user.role === ROLES.WORKER ? { worker: req.user._id } : { client: req.user._id };
+
+  // Admins oversee every booking; everyone else sees only the ones they are a party to. The
+  // ternary this replaced had no admin branch, so an admin was silently filtered by
+  // `client: <their own id>` and told they had no bookings at all.
+  const filter =
+    req.user.role === ROLES.ADMIN
+      ? {}
+      : req.user.role === ROLES.WORKER
+        ? { worker: req.user._id }
+        : { client: req.user._id };
   if (status?.length) filter.status = { $in: status };
 
   const [items, total] = await Promise.all([
@@ -75,7 +90,7 @@ export async function listBookings(req, res) {
 }
 
 export async function getBooking(req, res) {
-  const { booking, role } = await loadParticipantBooking(req.valid.params.id, req.user);
+  const { booking, role } = await loadParticipantBooking(req.valid.params.id, req.user, { allowAdmin: true });
   await respond(res, booking, role);
 }
 
@@ -371,7 +386,7 @@ export async function addDisputeStatement(req, res) {
 }
 
 export async function resolveDispute(req, res) {
-  const { booking } = await loadParticipantBooking(req.valid.params.id, req.user);
+  const { booking } = await loadParticipantBooking(req.valid.params.id, req.user, { allowAdmin: true });
   assertStatus(booking, [BOOKING_STATUS.DISPUTED], 'resolve');
   const { outcome, note } = req.valid.body;
   const payment = await findPayment(booking);

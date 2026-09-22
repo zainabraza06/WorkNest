@@ -78,6 +78,9 @@ export default function BookingsPage() {
           <>
             <ul className={cn('flex flex-col gap-3', query.isPlaceholderData && 'opacity-60')}>
               {query.data.items.map((b) => {
+                // An admin is not a party to any of these, so "the other side" means nothing —
+                // they need both names, and no "needs you" prompt.
+                const isAdmin = me.role === 'admin';
                 const other = me.role === 'worker' ? b.client : b.worker;
                 const meta = BOOKING_STATUS_META[b.status];
                 const needsMe = (me.role === 'client' && ['pending_payment', 'in_progress'].includes(b.status)) || (me.role === 'worker' && b.status === 'confirmed');
@@ -92,7 +95,8 @@ export default function BookingsPage() {
                           </Link>
                         </p>
                         <p className="truncate text-sm text-ink-600">
-                          {other?.name} · {formatDate(b.startDate)} – {formatDate(b.endDate)}
+                          {isAdmin ? `${b.client?.name} → ${b.worker?.name}` : other?.name} ·{' '}
+                          {formatDate(b.startDate)} – {formatDate(b.endDate)}
                         </p>
                       </div>
                       <div className="hidden text-right sm:block">

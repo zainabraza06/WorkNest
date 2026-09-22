@@ -118,9 +118,12 @@ export default function BookingDetailPage() {
   const meta = BOOKING_STATUS_META[b.status];
   const paymentMeta = b.payment ? PAYMENT_STATUS_META[b.payment.status] : null;
   const contactRevealed = Boolean(other.phone || other.email);
-  const canCancel = ['pending_payment', 'confirmed'].includes(b.status);
+  // An admin reads bookings but is not a party to one, so every action is hidden from them —
+  // the server refuses these anyway, and offering a button that 404s is worse than offering none.
+  const isParty = role === 'worker' || role === 'client';
+  const canCancel = isParty && ['pending_payment', 'confirmed'].includes(b.status);
   // Once work has started neither side may walk away alone: one asks, the other answers
-  const inProgress = b.status === 'in_progress';
+  const inProgress = isParty && b.status === 'in_progress';
   const request = b.cancellationRequest;
   const pendingRequest = request?.status === 'pending' ? request : null;
   const iAsked = pendingRequest && pendingRequest.byRole === role;
@@ -175,7 +178,7 @@ export default function BookingDetailPage() {
       )}
       {b.dispute?.statements?.length > 0 && (
         <div className="mb-5">
-          <DisputeCase booking={b} canRespond={b.status === 'disputed'} />
+          <DisputeCase booking={b} canRespond={isParty && b.status === 'disputed'} />
         </div>
       )}
 
