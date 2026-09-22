@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell, CheckCheck } from 'lucide-react';
 
 import { notificationsApi } from '@/api';
+import { toast } from '@/components/feedback/toastStore';
 import { useSocketEvent } from '@/realtime/socket';
 import { timeAgo } from '@/lib/format';
 import { cn } from '@/lib/cn';
@@ -33,9 +34,30 @@ export function NotificationBell() {
   // Live arrivals while the app is open
   useSocketEvent('notification:new', () => qc.invalidateQueries({ queryKey: ['notifications'] }));
 
+  /**
+   * Marking read is a cosmetic change to a list already on screen, so it is applied optimistically
+   * and reconciled afterwards. Waiting for a round trip on a free-tier server made the button feel
+   * dead; failing silently made it indistinguishable from one.
+   */
   const markRead = useMutation({
     mutationFn: (id) => notificationsApi.markRead(id),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ['notifications'] });
+      const previous = qc.getQueryData(['notifications']);
+      qc.setQueryData(['notifications'], (old) => {
+        if (!old) return old;
+        const now = new Date().toISOString();
+        const items = old.items.map((n) => (!n.readAt && (!id || n._id === id) ? { ...n, readAt: now } : n));
+        return { ...old, items, unread: items.filter((n) => !n.readAt).length };
+      });
+      return { previous };
+    },
+    onError: (err, _id, ctx) => {
+      // Put the badge back rather than leave it lying about what the server knows
+      if (ctx?.previous) qc.setQueryData(['notifications'], ctx.previous);
+      toast({ title: 'Could not mark as read', description: err.message, tone: 'danger' });
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
   });
 
   useEffect(() => {
@@ -87,7 +109,7 @@ export function NotificationBell() {
             {unread > 0 && (
               <button
                 type="button"
-                onClick={() => markRead.mutate(undefined)}
+                onClick={() => markRead.mutate(undefined)} /* no id = all of them */
                 className="inline-flex items-center gap-1 text-xs font-semibold text-ink-500 hover:text-ink-950"
               >
                 <CheckCheck className="size-3.5" aria-hidden /> Mark all read
