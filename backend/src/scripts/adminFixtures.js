@@ -10,7 +10,7 @@
  * the entire point of demonstrating it. If Stripe is not configured or unreachable the booking
  * is still seeded, just without a payment, and the console says "none".
  */
-import { Booking, Job, Offer, Payment, WorkerProfile, Withdrawal } from '../models/index.js';
+import { Booking, Job, Message, Offer, Payment, WorkerProfile, Withdrawal } from '../models/index.js';
 import { BOOKING_STATUS, JOB_STATUS, OFFER_STATUS, PAYMENT_STATUS, PLATFORM_FEE_RATE, ROLES } from '../constants/index.js';
 import { computeEndDate } from '../utils/dates.js';
 import { env } from '../config/env.js';
@@ -87,6 +87,11 @@ async function heldIntent(amount, bookingId, clientId, workerId) {
   }
 }
 
+const CLIENT_STATEMENT =
+  'He came on Thursday, said the gas was low and refilled it. It cooled for about an hour and then went back to blowing warm air. I have called him four times since and he has not picked up or come back to look at it.';
+const WORKER_STATEMENT =
+  'I refilled the gas and it was holding pressure when I left — the client saw the gauge. If it stopped cooling an hour later the compressor is failing, which is a different job and a part I would have to order. I did answer twice and told him this.';
+
 /**
  * A disputed booking for the admin to resolve.
  * @param worker  the accused worker  @param client  the complaining client  @param job  their job
@@ -127,6 +132,48 @@ export async function seedDispute({ worker, client, job, amount = 4000 }) {
       },
     ],
   });
+
+  // Both sides on the record, because an admin deciding from one unanswered claim is exactly
+  // what the case file exists to prevent — and a queue entry with nothing in it demonstrates
+  // nothing. No photographs: the seed will not fabricate evidence it does not have.
+  booking.dispute = {
+    openedBy: client.user._id,
+    openedAt: daysFromNow(-2),
+    statements: [
+      { by: client.user._id, byRole: ROLES.CLIENT, text: CLIENT_STATEMENT, at: daysFromNow(-2) },
+      { by: worker.user._id, byRole: ROLES.WORKER, text: WORKER_STATEMENT, at: daysFromNow(-1) },
+    ],
+  };
+  await booking.save();
+
+  // The conversation that led here — the admin reads this as evidence too
+  await Message.create([
+    {
+      offer: offer._id,
+      job: job._id,
+      sender: worker.user._id,
+      type: 'offer',
+      text: 'I can come Thursday morning. Rs 4,000 covers the service and a gas refill.',
+      roundId: offer.rounds[0]._id,
+      createdAt: daysFromNow(-6),
+    },
+    {
+      offer: offer._id,
+      job: job._id,
+      sender: client.user._id,
+      type: 'text',
+      text: 'Thursday works. Please check the outdoor unit too, it has been making a noise.',
+      createdAt: daysFromNow(-6),
+    },
+    {
+      offer: offer._id,
+      job: job._id,
+      sender: worker.user._id,
+      type: 'text',
+      text: 'Noted. If the compressor is the problem that is a separate job, I will tell you on the day.',
+      createdAt: daysFromNow(-5),
+    },
+  ]);
 
   const intent = await heldIntent(amount, booking._id, client.user._id, worker.user._id);
   if (intent) {
