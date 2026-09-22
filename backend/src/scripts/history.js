@@ -21,8 +21,8 @@
 import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 
-import { Booking, Job, Offer, Review, User, WorkerProfile } from '../models/index.js';
-import { BOOKING_STATUS, JOB_STATUS, OFFER_STATUS, ROLES } from '../constants/index.js';
+import { Booking, Job, Offer, Payment, Review, User, WorkerProfile } from '../models/index.js';
+import { BOOKING_STATUS, JOB_STATUS, OFFER_STATUS, PAYMENT_STATUS, PLATFORM_FEE_RATE, ROLES } from '../constants/index.js';
 import { computeEndDate } from '../utils/dates.js';
 
 const DAY = 86_400_000;
@@ -158,6 +158,7 @@ export async function seedWorkerHistory(workers) {
   const offers = [];
   const bookings = [];
   const reviews = [];
+  const payments = [];
 
   workers.forEach(({ user, profile }, w) => {
     const { completedJobs = 0, cancelledJobs = 0, repeatHires = 0, reviewCount = 0, avgRating = 0 } = profile.stats;
@@ -180,6 +181,7 @@ export async function seedWorkerHistory(workers) {
       const jobId = oid();
       const offerId = oid();
       const bookingId = oid();
+      const paymentId = oid();
       const completed = status === BOOKING_STATUS.COMPLETED;
 
       jobs.push({
@@ -231,10 +233,32 @@ export async function seedWorkerHistory(workers) {
         status,
         ...(completed && { completedAt: endedAt }),
         ...(!completed && { cancelledAt: endedAt, cancellationReason: 'Client postponed the work' }),
+        ...(completed && { payment: paymentId }),
         reviewed: { byClient: completed && i < reviewCount, byWorker: false },
         createdAt: new Date(startDate.getTime() - DAY),
         updatedAt: endedAt,
       });
+
+      // Completed work was paid for, so the escrow record exists and is released. Without it a
+      // worker with 44 finished jobs would open Earnings and see zero.
+      if (completed) {
+        const platformFee = Math.round(price * PLATFORM_FEE_RATE);
+        payments.push({
+          _id: paymentId,
+          booking: bookingId,
+          client: client._id,
+          worker: user._id,
+          amount: price,
+          platformFee,
+          workerPayout: price - platformFee,
+          providerPaymentId: `pi_seed_${bookingId}`,
+          status: PAYMENT_STATUS.RELEASED,
+          heldAt: new Date(startDate.getTime() - DAY),
+          releasedAt: endedAt,
+          createdAt: new Date(startDate.getTime() - DAY),
+          updatedAt: endedAt,
+        });
+      }
 
       // Not every completed job earns a review — that gap is why completedJobs > reviewCount
       if (completed && i < reviewCount) {
@@ -263,9 +287,16 @@ export async function seedWorkerHistory(workers) {
   await Job.insertMany(jobs, opts);
   await Offer.insertMany(offers, opts);
   await Booking.insertMany(bookings, opts);
+  await Payment.insertMany(payments, opts);
   await Review.insertMany(reviews, opts);
 
-  return { pastClients: pastClients.length, jobs: jobs.length, bookings: bookings.length, reviews: reviews.length };
+  return {
+    pastClients: pastClients.length,
+    jobs: jobs.length,
+    bookings: bookings.length,
+    reviews: reviews.length,
+    payments: payments.length,
+  };
 }
 
 /**

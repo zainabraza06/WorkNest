@@ -11,6 +11,7 @@ import offerRoutes from './offer.routes.js';
 import priceRoutes from './price.routes.js';
 import rankingRoutes from './ranking.routes.js';
 import userRoutes from './user.routes.js';
+import withdrawalRoutes from './withdrawal.routes.js';
 import workerRoutes from './worker.routes.js';
 
 const router = Router();
@@ -34,6 +35,7 @@ router.use('/bookings', bookingRoutes);
 router.use('/price', priceRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/ranking', rankingRoutes);
+router.use('/withdrawals', withdrawalRoutes);
 router.use('/admin', adminRoutes);
 
 export default router;

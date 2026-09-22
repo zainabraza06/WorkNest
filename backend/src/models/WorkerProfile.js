@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { CATEGORIES, ID_VERIFICATION_STATUS } from '../constants/index.js';
+import { CATEGORIES, ID_VERIFICATION_STATUS, PAYOUT_METHODS } from '../constants/index.js';
 import { imageSchema, locationFields } from './shared.js';
 
 const availabilitySlotSchema = new mongoose.Schema(
@@ -41,6 +41,19 @@ const workerProfileSchema = new mongoose.Schema(
     portfolio: {
       type: [imageSchema],
       validate: { validator: (v) => v.length <= 12, message: 'Portfolio is limited to 12 images' },
+    },
+
+    /**
+     * Where this worker's earnings are sent. Held on the profile so it survives between
+     * withdrawals, but snapshotted onto each request so changing it never rewrites history.
+     * Never included in the public projection — see publicView().
+     */
+    payoutMethod: {
+      type: { type: String, enum: PAYOUT_METHODS },
+      accountTitle: { type: String, trim: true, maxlength: 80 },
+      accountNumber: { type: String, trim: true, maxlength: 34 }, // IBAN is 24 in PK; wallets are 11
+      bankName: { type: String, trim: true, maxlength: 60 },
+      updatedAt: Date,
     },
 
     idVerification: {

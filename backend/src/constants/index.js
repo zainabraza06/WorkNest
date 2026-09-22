@@ -80,3 +80,14 @@ export const PAYMENT_STATUS = Object.freeze({
 export const ID_VERIFICATION_STATUS = Object.freeze(['none', 'pending', 'verified', 'rejected']);
 
 export const PLATFORM_FEE_RATE = 0.05;
+
+export const WITHDRAWAL_STATUS = Object.freeze({
+  REQUESTED: 'requested', // waiting for the platform to send the money
+  PAID: 'paid',
+  REJECTED: 'rejected',
+});
+
+export const PAYOUT_METHODS = Object.freeze(['bank', 'easypaisa', 'jazzcash']);
+
+/** Not worth a bank transfer below this, and it keeps the admin queue meaningful. */
+export const MIN_WITHDRAWAL_PKR = 500;

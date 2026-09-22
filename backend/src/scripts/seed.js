@@ -15,7 +15,7 @@ import { BOOKING_STATUS, JOB_STATUS, OFFER_STATUS, PAYMENT_STATUS, PLATFORM_FEE_
 import { computeEndDate } from '../utils/dates.js';
 import { refreshTrustScore } from '../services/trust.service.js';
 import { recomputeWorkerStats, seedWorkerHistory } from './history.js';
-import { seedDispute, seedPendingVerification } from './adminFixtures.js';
+import { seedDispute, seedPendingVerification, seedWithdrawalRequest } from './adminFixtures.js';
 
 const PASSWORD = 'Password123';
 
@@ -358,6 +358,9 @@ async function seed() {
     amount: 4000,
   });
 
+  // Muhammad Yousaf has the most completed work, so he has the most to withdraw
+  const payout = await seedWithdrawalRequest(workers[1]);
+
   // Trust depends on those counters, so it is scored last, against the finished picture
   for (const { user } of workers) await refreshTrustScore(user._id);
 
@@ -366,7 +369,7 @@ Seed complete:
   ${workers.length} workers, ${clients.length} clients, 1 admin
   ${jobs.length} jobs (1 open negotiation, 1 completed booking with reviews)
   ${history.bookings} historical bookings and ${history.reviews} reviews from ${history.pastClients} past clients
-  admin queue: 1 ID verification pending (${pendingId}), 1 dispute${dispute.escrowHeld ? ' with Rs 4,000 genuinely held in Stripe test mode' : ' (no payment — Stripe unavailable)'}
+  admin queue: 1 ID verification pending (${pendingId}), 1 dispute${dispute.escrowHeld ? ' with Rs 4,000 genuinely held in Stripe test mode' : ' (no payment — Stripe unavailable)'}${payout ? `, 1 withdrawal of Rs ${payout.amount.toLocaleString('en-PK')} from ${payout.name}` : ''}
 
   Log in with any of these — password: ${PASSWORD}
     worker1@worknest.test   (Ahmed Raza, electrician, strong history)

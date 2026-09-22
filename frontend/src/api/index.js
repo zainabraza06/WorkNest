@@ -79,3 +79,13 @@ export const notificationsApi = {
   list: (params) => unwrap(api.get('/notifications', { params: clean(params) })),
   markRead: (id) => unwrap(api.post('/notifications/read', id ? { id } : {})),
 };
+
+export const earningsApi = {
+  get: () => unwrap(api.get('/withdrawals/earnings')),
+  setMethod: (body) => unwrap(api.put('/withdrawals/method', body)),
+  request: (amount) => unwrap(api.post('/withdrawals', { amount })),
+  list: (params) => unwrap(api.get('/withdrawals', { params: clean(params) })),
+  // Admin
+  summary: () => unwrap(api.get('/withdrawals/summary')),
+  settle: (id, paid, { reference, note } = {}) => unwrap(api.post(`/withdrawals/${id}/settle`, { paid, reference, note })),
+};

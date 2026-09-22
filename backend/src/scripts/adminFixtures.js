@@ -10,7 +10,7 @@
  * the entire point of demonstrating it. If Stripe is not configured or unreachable the booking
  * is still seeded, just without a payment, and the console says "none".
  */
-import { Booking, Job, Offer, Payment, WorkerProfile } from '../models/index.js';
+import { Booking, Job, Offer, Payment, WorkerProfile, Withdrawal } from '../models/index.js';
 import { BOOKING_STATUS, JOB_STATUS, OFFER_STATUS, PAYMENT_STATUS, PLATFORM_FEE_RATE, ROLES } from '../constants/index.js';
 import { computeEndDate } from '../utils/dates.js';
 import { env } from '../config/env.js';
@@ -32,6 +32,35 @@ export async function seedPendingVerification(worker) {
     },
   );
   return worker.user.name;
+}
+
+/**
+ * A worker asking to be paid, so the withdrawal queue has something in it.
+ *
+ * The amount is checked against what that worker has actually earned, because a request for
+ * money they never made would be exactly the fiction this seed is meant to avoid.
+ */
+export async function seedWithdrawalRequest(worker) {
+  const { getEarnings } = await import('../services/earnings.service.js');
+  const { available } = await getEarnings(worker.user._id);
+  if (available < 1000) return null;
+
+  const amount = Math.min(available, Math.round(available / 2 / 500) * 500) || 500;
+  const method = {
+    type: 'bank',
+    accountTitle: worker.user.name,
+    accountNumber: 'PK36SCBL0000001123456702',
+    bankName: 'HBL',
+  };
+
+  await WorkerProfile.updateOne({ user: worker.user._id }, { payoutMethod: { ...method, updatedAt: new Date() } });
+  const withdrawal = await Withdrawal.create({
+    worker: worker.user._id,
+    amount,
+    method,
+    requestedAt: daysFromNow(-1),
+  });
+  return { name: worker.user.name, amount: withdrawal.amount };
 }
 
 /** Authorise a real test-mode payment so the admin's release/refund is not a simulation. */

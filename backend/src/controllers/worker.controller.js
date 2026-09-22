@@ -24,6 +24,8 @@ function publicView(profile) {
   const json = profile.toJSON();
   json.idVerified = json.idVerification?.status === 'verified';
   delete json.idVerification;
+  // Bank details belong to the worker alone — never on a page anyone can open
+  delete json.payoutMethod;
   return json;
 }
 

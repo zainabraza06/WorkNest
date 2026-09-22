@@ -21,6 +21,7 @@ const BookingsPage = lazy(() => import('@/pages/bookings/BookingsPage'));
 const BookingDetailPage = lazy(() => import('@/pages/bookings/BookingDetailPage'));
 const ClientDashboardPage = lazy(() => import('@/pages/dashboard/ClientDashboardPage'));
 const AdminDashboardPage = lazy(() => import('@/pages/admin/AdminDashboardPage'));
+const EarningsPage = lazy(() => import('@/pages/earnings/EarningsPage'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 
 function PageFallback() {
@@ -70,6 +71,7 @@ export default function App() {
           </Route>
 
           <Route element={<RequireAuth roles={['worker']} />}>
+            <Route path="earnings" element={<EarningsPage />} />
             <Route path="jobs" element={<BrowseJobsPage />} />
             <Route path="jobs/:id/offer" element={<SendOfferPage />} />
           </Route>
