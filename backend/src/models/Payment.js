@@ -35,4 +35,28 @@ const paymentSchema = new mongoose.Schema(
 
 paymentSchema.set('toJSON', { versionKey: false });
 
+/**
+ * A worker's balance is derived from these rows, so every status change moves it: escrow held
+ * changes what is pending, released changes what is available, refunded takes it back.
+ *
+ * The hook lives on the model rather than at each call site because there are seven places a
+ * payment's status changes — the webhook, the manual sync, completion, cancellation, dispute
+ * resolution — and one of them being forgotten would leave a worker staring at a stale number.
+ * The socket module is imported lazily so models and sockets do not import each other at load.
+ */
+paymentSchema.pre('save', function trackStatusChange(next) {
+  this.$locals.statusChanged = this.isModified('status');
+  next();
+});
+
+paymentSchema.post('save', async function announceStatusChange(doc) {
+  if (!doc.$locals?.statusChanged) return;
+  try {
+    const { emitToUser } = await import('../socket/index.js');
+    emitToUser(doc.worker, 'earnings:updated', { paymentId: doc._id, status: doc.status });
+  } catch {
+    // Never let a notification failure roll back money that has already been recorded
+  }
+});
+
 export const Payment = mongoose.model('Payment', paymentSchema);

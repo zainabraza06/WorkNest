@@ -56,4 +56,25 @@ withdrawalSchema.index({ status: 1, requestedAt: 1 });
 
 withdrawalSchema.set('toJSON', { versionKey: false });
 
+/** Requesting locks an amount and settling releases or removes it — both move the balance. */
+withdrawalSchema.post('save', async function announceChange(doc) {
+  try {
+    const { emitToUser } = await import('../socket/index.js');
+    emitToUser(doc.worker, 'earnings:updated', { withdrawalId: doc._id, status: doc.status });
+  } catch {
+    /* a missed push is not worth failing the write for */
+  }
+});
+
+// findOneAndUpdate bypasses document middleware, and settling uses exactly that
+withdrawalSchema.post('findOneAndUpdate', async function announceSettlement(doc) {
+  if (!doc) return;
+  try {
+    const { emitToUser } = await import('../socket/index.js');
+    emitToUser(doc.worker, 'earnings:updated', { withdrawalId: doc._id, status: doc.status });
+  } catch {
+    /* as above */
+  }
+});
+
 export const Withdrawal = mongoose.model('Withdrawal', withdrawalSchema);

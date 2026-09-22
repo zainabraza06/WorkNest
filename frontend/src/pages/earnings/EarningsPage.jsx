@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Banknote, Clock, Landmark, Wallet } from 'lucide-react';
 
 import { earningsApi } from '@/api';
+import { useSocketEvent } from '@/realtime/socket';
 import { toast } from '@/components/feedback/toastStore';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -106,6 +107,16 @@ export default function EarningsPage() {
   const [error, setError] = useState(null);
 
   const query = useQuery({ queryKey: ['earnings'], queryFn: earningsApi.get });
+
+  /**
+   * Money arriving is the one thing a worker should not have to refresh for. The server pushes
+   * whenever a payment or a withdrawal changes status, and the figures here are derived from
+   * exactly those rows, so refetching is the honest response — recomputing a balance in the
+   * browser would be guessing at what the server already knows.
+   */
+  useSocketEvent('earnings:updated', () => {
+    qc.invalidateQueries({ queryKey: ['earnings'] });
+  });
 
   const request = useMutation({
     mutationFn: () => earningsApi.request(Number(amount)),
