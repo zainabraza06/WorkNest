@@ -56,25 +56,27 @@ withdrawalSchema.index({ status: 1, requestedAt: 1 });
 
 withdrawalSchema.set('toJSON', { versionKey: false });
 
-/** Requesting locks an amount and settling releases or removes it — both move the balance. */
-withdrawalSchema.post('save', async function announceChange(doc) {
-  try {
-    const { emitToUser } = await import('../socket/index.js');
-    emitToUser(doc.worker, 'earnings:updated', { withdrawalId: doc._id, status: doc.status });
-  } catch {
-    /* a missed push is not worth failing the write for */
-  }
-});
+/**
+ * Requesting locks an amount and settling releases or removes it — both move the balance.
+ *
+ * `worker` is read through a normaliser because a caller may have populated it: settling does,
+ * to name the worker in the notification, and an emit addressed to a populated document lands
+ * in the room "user:[object Object]", which is to say nowhere.
+ */
+const workerId = (doc) => doc?.worker?._id ?? doc?.worker;
 
-// findOneAndUpdate bypasses document middleware, and settling uses exactly that
-withdrawalSchema.post('findOneAndUpdate', async function announceSettlement(doc) {
+async function announceBalanceChange(doc) {
   if (!doc) return;
   try {
     const { emitToUser } = await import('../socket/index.js');
-    emitToUser(doc.worker, 'earnings:updated', { withdrawalId: doc._id, status: doc.status });
+    emitToUser(workerId(doc), 'earnings:updated', { withdrawalId: doc._id, status: doc.status });
   } catch {
-    /* as above */
+    /* a missed push is not worth failing the write for */
   }
-});
+}
+
+withdrawalSchema.post('save', announceBalanceChange);
+// findOneAndUpdate bypasses document middleware, and settling uses exactly that to stay atomic
+withdrawalSchema.post('findOneAndUpdate', announceBalanceChange);
 
 export const Withdrawal = mongoose.model('Withdrawal', withdrawalSchema);

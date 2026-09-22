@@ -52,7 +52,8 @@ paymentSchema.post('save', async function announceStatusChange(doc) {
   if (!doc.$locals?.statusChanged) return;
   try {
     const { emitToUser } = await import('../socket/index.js');
-    emitToUser(doc.worker, 'earnings:updated', { paymentId: doc._id, status: doc.status });
+    // ?._id in case a caller populated it — an emit to a populated doc reaches nobody
+    emitToUser(doc.worker?._id ?? doc.worker, 'earnings:updated', { paymentId: doc._id, status: doc.status });
   } catch {
     // Never let a notification failure roll back money that has already been recorded
   }
