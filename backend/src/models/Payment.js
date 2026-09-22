@@ -44,9 +44,8 @@ paymentSchema.set('toJSON', { versionKey: false });
  * resolution — and one of them being forgotten would leave a worker staring at a stale number.
  * The socket module is imported lazily so models and sockets do not import each other at load.
  */
-paymentSchema.pre('save', function trackStatusChange(next) {
+paymentSchema.pre('save', function trackStatusChange() {
   this.$locals.statusChanged = this.isModified('status');
-  next();
 });
 
 paymentSchema.post('save', async function announceStatusChange(doc) {
