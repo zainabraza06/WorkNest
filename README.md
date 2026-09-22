@@ -6,12 +6,20 @@
 
 Region / currency for this build: **Pakistan · PKR**.
 
+**Live:** [work-nest-z.vercel.app](https://work-nest-z.vercel.app) ·
+API [worknest-qicp.onrender.com](https://worknest-qicp.onrender.com/api/health) ·
+AI service [worknest-ai.onrender.com](https://worknest-ai.onrender.com/health)
+
+> Both backends are on Render's free tier and sleep after ~15 minutes idle. The first request
+> takes ~50s to wake them. Sign in with `client1@worknest.test` / `Password123`.
+
 ---
 
 ## Contents
 
 - [Architecture](#architecture)
 - [Features](#features)
+- [Money: escrow, payouts and disputes](#money-escrow-payouts-and-disputes)
 - [The AI components](#the-ai-components)
 - [What is real vs. simulated](#what-is-real-vs-simulated) ← please read
 - [Running it locally](#running-it-locally)
@@ -99,6 +107,12 @@ WorkNest/
 - Worker-side job feed with "only within my service area", keyword search and budget filters.
 - Geospatial queries use a `2dsphere` index; keyword search uses weighted MongoDB text indexes.
 
+### Hiring, in both directions
+- **Post a job** and let workers bid on it, or **hire one worker directly** from their profile.
+  A direct hire is a private request: the job is excluded from browse, no other worker may bid,
+  and the request *is* the client's opening offer — so the worker accepts or counters through
+  the same negotiation, rather than a second mechanism existing for the same conversation.
+
 ### Negotiation & booking
 - **Structured offers, not just chat.** Every proposal is a round on the `Offer` document
   (amount, duration, start date, terms), so the UI can render offer cards and both sides always
@@ -108,15 +122,35 @@ WorkNest/
 - Accepting an offer atomically confirms the job, creates the booking and closes competing offers.
 - Job lifecycle: `posted → negotiating → confirmed → in_progress → completed → reviewed`
   (plus `cancelled`). If a worker cancels, the job reopens and the other offers come back to life.
+- **Before work starts**, either side can cancel outright and the escrow is released.
+  **Once work has started, neither side can walk away alone** — one requests, the other answers.
+  Accepting refunds the client in full; declining opens a dispute rather than forcing the work on.
+  An agreed cancellation is attributed to whoever asked, so a worker cannot dodge the Trust Score
+  consequence by getting the client to click the button.
+
+### Notifications
+- Everything that happens to you is recorded, not just pushed: a bell in the header with an
+  unread count, covering hire requests, bids, counters, accepts, messages, every booking state
+  change, reviews received and ID decisions.
+- A socket event only reaches someone who is connected at that instant. These survive being
+  offline, expire after 90 days, and carry a link to the resource rather than a copy of it.
 
 ### Payments (escrow)
 - Stripe **test mode** PaymentIntents with `capture_method: manual`:
   `requires_payment → held (authorised) → released (captured)` or `refunded (cancelled)`.
+- Because capture is manual, held money is only ever an **authorisation**. Cancelling voids it,
+  so the card is never charged and there is no refund to wait for.
 - Contact details and the exact address are revealed only once payment is held in escrow.
 - Webhook (`/api/payments/webhook`, raw-body mounted before `express.json`) plus a manual
   "sync" endpoint so local development works without the Stripe CLI.
 - 5% platform fee is deducted from the worker payout and shown transparently on both sides.
-- Disputes freeze the escrow; an admin endpoint resolves them by releasing or refunding.
+
+### Admin console
+- The two decisions only staff can make: **ID verification** and **disputed escrow**.
+- Queues for each, plus a platform summary counted from the collections rather than stored, so
+  it cannot drift from what the rest of the app reports.
+- The CNIC never appears in a list response — the queue reports only whether a document exists,
+  and the image is fetched through a short-lived signed URL when an admin opens it.
 
 ### Reviews & trust
 - Two-sided reviews after a completed booking, with optional quality/punctuality/communication detail.
@@ -133,6 +167,64 @@ WorkNest/
   keyboard-navigable menus, native `<dialog>` modals (focus trapping for free), skip link,
   `aria-live` result counts, visible focus rings, reduced-motion support.
 - Deliberate loading (skeletons), empty and error states on every async screen.
+
+---
+
+## Money: escrow, payouts and disputes
+
+The part of a marketplace that has to be honest about what it can and cannot do.
+
+### The escrow ladder
+
+```
+client pays  ──►  held (authorised, not charged)  ──►  released (captured)   worker is owed it
+                        │                         └─►  refunded (voided)     client keeps it
+                        └─ a dispute freezes it here until an admin decides
+```
+
+### Worker payouts — settled outside Stripe, deliberately
+
+Escrow captures into the **platform's** Stripe account. Paying that on to the worker is normally
+Stripe Connect's job, and **Connect is not available for Pakistan**. Rather than put a Withdraw
+button on a screen and have it do nothing, the last leg is modelled as what it would really be: a
+bank or wallet transfer made by hand, requested by the worker and recorded by an admin against a
+transaction reference.
+
+Workers get an **Earnings** page — available, in escrow, withdrawn, lifetime — where every figure
+is summed from `Payment` and `Withdrawal` rows on each read. **No running balance is stored**: a
+cached total that drifts from the records behind it is worse than no total, and this is money.
+
+Two things hold the accounting together:
+
+- **One open request per worker, enforced by a partial unique index** rather than a read-then-check.
+  Two requests sent together both read the same available balance and both pass validation — the
+  index is what stops the second being written. There is a test that fires them concurrently.
+- **Settling is an atomic `findOneAndUpdate` on `status: requested`**, so two admins cannot pay the
+  same request twice.
+
+Payout details are snapshotted onto each request: changing your account number must never rewrite
+where an already-paid withdrawal went. They are stripped from the public profile projection, masked
+in the worker's own history, and shown in full only to the admin who has to make the transfer.
+
+### Disputes — a case, not a claim
+
+A dispute used to carry one sentence from the client. The worker was never asked, nothing could be
+shown, and the negotiation thread was invisible to admins. Money changed hands on a single
+unanswered claim.
+
+| | Before | Now |
+| --- | --- | --- |
+| Client's case | one sentence | statement + up to 5 photographs |
+| Worker's case | — | statement + photographs, and they are notified there is something to answer |
+| Their conversation | invisible to the admin | readable in the console |
+| Decision reason | optional | **required**, stored on the booking, shown to both parties |
+
+**Admins read; they do not participate.** They are allowed past the role guard on the two *read*
+routes only, and the controller hands them a `null` role — so every "is it my turn" check still
+refuses them. An admin cannot counter an offer or post in a thread, and there are tests that say so.
+
+Evidence photographs are ordinary Cloudinary images, not signed private assets: these are pictures
+of work and both parties are entitled to see them. Identity documents stay private and admin-only.
 
 ---
 
@@ -216,6 +308,8 @@ Being explicit about this, since it is a student/portfolio project:
 | ↳ pricing | **Trained** HistGradientBoosting on log(price), 7.5% MAE — 88–94% of the computable ceiling. |
 | ↳ ranking | **Trained on real behaviour** once the app is used — nothing synthetic. Logged impressions → clicks/hires → logistic regression. |
 | ↳ **training data (price & trust)** | **Synthetic — this is the real caveat.** No booking history exists pre-launch, so prices are sampled around hand-assembled 2026 Pakistani wage anchors (`ai-service/data/rate_anchors.json` — **not** a wage survey) and trust targets come from a documented formula plus noise. The models are genuinely trained and evaluated, but their ceiling is the assumptions in the generators. Point the scripts at real bookings later — the feature contract is already identical. |
+| **Worker payouts** | **Real ledger, manual settlement.** Balances are derived from real `Payment` rows and withdrawal requests are real records with real guards. The transfer itself happens outside the app, because Stripe Connect is unavailable for Pakistan — an admin marks it paid against a reference. Nothing pretends money moved automatically. |
+| **Disputes** | **Real.** Both sides submit statements and photographs, admins read the negotiation thread as evidence, and the decision is recorded with a required reason. Resolution moves the actual Stripe authorisation. |
 | **ID verification** | Documents really are uploaded and stored privately, but approval is a manual admin endpoint — no automated document checks. |
 | **Cloudinary** | Real, but optional: upload endpoints return a clear 503 if credentials are absent, so the rest of the app runs without them. |
 
@@ -290,9 +384,20 @@ Vite proxies `/api` and `/socket.io` to port 5000, so no CORS setup is needed in
 | `client1@worknest.test` | Client | Lahore; has an open negotiation waiting on a reply |
 | `worker1@worknest.test` | Worker | Electrician, strong history, ID verified |
 | `worker9@worknest.test` | Worker | Brand new — shows the "New" Trust Score state |
-| `admin@worknest.test` | Admin | Can view ID documents and resolve disputes |
+| `worker2@worknest.test` | Worker | Plumber, 58 paid jobs — has earnings and a withdrawal waiting |
+| `admin@worknest.test` | Admin | ID verification, disputes and the payout queue |
 
 Password for all: `Password123`
+
+`npm run seed` also back-fills the history those profiles claim: ~238 completed and cancelled
+bookings with their escrow records, 188 reviews from 42 past clients, and the counters recomputed
+from those documents afterwards — so a profile reports its numbers rather than asserting them.
+It leaves one pending ID verification, one dispute with both sides on record, and one withdrawal
+request, so none of the admin queues open empty.
+
+> `npm run seed` **wipes every collection first.** It refuses when `NODE_ENV=production`, which
+> is not true when you run it from your own machine against a deployed database — so check what
+> is in there before running it.
 
 ### Stripe webhook (optional)
 
@@ -341,53 +446,86 @@ All responses are `{ success, data }` or `{ success: false, message, details? }`
 | `GET` | `/api/workers/:userId` | Public worker profile + recent reviews |
 | `GET/POST` | `/api/jobs` | Browse / post jobs |
 | `PATCH/POST` | `/api/jobs/:id`, `/api/jobs/:id/cancel` | Edit / cancel |
+| `POST` | `/api/jobs` with `invitedWorker` + `offerAmount` | **Hire one worker directly** — private job + opening offer |
 | `POST` | `/api/jobs/:id/offers` | Worker opens a negotiation |
 | `GET` | `/api/offers`, `/api/offers/:id` | Negotiation inbox / thread |
 | `POST` | `/api/offers/:id/counter`, `/accept`, `/reject`, `/withdraw` | Structured negotiation |
 | `GET/POST` | `/api/offers/:id/messages`, `/read` | Chat |
 | `GET` | `/api/bookings`, `/api/bookings/:id` | Bookings |
 | `POST` | `/api/bookings/:id/payment`, `/payment/sync` | Escrow |
-| `POST` | `/api/bookings/:id/start`, `/complete`, `/cancel`, `/dispute`, `/resolve` | Lifecycle |
+| `POST` | `/api/bookings/:id/start`, `/complete`, `/cancel` | Lifecycle (cancel only before work starts) |
+| `POST` | `/api/bookings/:id/cancellation`, `/cancellation/respond` | Mutual cancellation of work already under way |
+| `POST` | `/api/bookings/:id/dispute`, `/dispute/statements` | Open a dispute / add a statement (multipart, photos) |
+| `POST` | `/api/bookings/:id/resolve` | Admin decides — outcome + required reason |
 | `POST` | `/api/bookings/:id/reviews` | Review after completion |
 | `GET` | `/api/users/:userId/reviews` | Public reviews |
 | `GET` | `/api/price/suggest` | Fair-price guidance |
 | `POST` | `/api/ranking/events` | Labels a search result (open / hire intent) for the ranker |
+| `GET/POST` | `/api/notifications`, `/notifications/read` | Notification inbox and read state |
+| `GET` | `/api/withdrawals/earnings` | Worker balances, payments and withdrawal history |
+| `PUT` | `/api/withdrawals/method` | Bank / Easypaisa / JazzCash details |
+| `GET/POST` | `/api/withdrawals` | Request a withdrawal · worker's own list · admin queue |
+| `POST` | `/api/withdrawals/:id/settle` | Admin marks paid (reference required) or rejects |
+| `GET` | `/api/admin/overview`, `/verifications`, `/disputes` | Admin console queues and summary |
 | `POST` | `/api/payments/webhook` | Stripe (raw body) |
 
 **Socket.io events** — client → server: `thread:join`, `thread:leave`, `thread:typing`;
 server → client: `offer:new`, `offer:updated`, `message:new`, `thread:activity`, `thread:typing`,
-`thread:read`, `booking:updated`, `review:new`.
+`thread:read`, `booking:updated`, `review:new`, `notification:new`, `earnings:updated`.
+
+`earnings:updated` is emitted from post-save hooks on `Payment` and `Withdrawal` rather than at
+each call site — a payment's status changes in seven places, and one of them being forgotten would
+leave a worker looking at a stale balance.
 
 ---
 
 ## Data model
 
 `User` (auth + role) · `WorkerProfile` (skills, rates, geo, availability, portfolio, ID verification,
-stats, trustScore) · `ClientProfile` · `Job` (budget, duration, geo, status, suggestedPrice) ·
-`Offer` (the negotiation thread — `rounds[]` of structured proposals) · `Booking` (agreed terms,
-status timeline) · `Payment` (escrow state) · `Review` (two-sided) · `Message` (text / offer / system) ·
-`SearchImpression` (ranker training data: results shown, their features at that moment, and what
-the client did next — TTL 180 days).
+stats, trustScore, **payoutMethod**) · `ClientProfile` · `Job` (budget, duration, geo, status,
+suggestedPrice, **invitedWorker** for a direct hire) · `Offer` (the negotiation thread — `rounds[]`
+of structured proposals) · `Booking` (agreed terms, status timeline, **cancellationRequest**,
+**dispute** with statements, evidence and the resolution) · `Payment` (escrow state) ·
+`Withdrawal` (a worker asking to be paid, with the payout details snapshotted onto it) ·
+`Review` (two-sided) · `Message` (text / offer / system) · `Notification` (what happened while you
+were away — TTL 90 days) · `SearchImpression` (ranker training data: results shown, their features
+at that moment, and what the client did next — TTL 180 days).
 
 Indexes: `2dsphere` on worker, client and job locations; weighted text indexes on worker
 (`skills` ×5, `headline` ×3, `bio`) and job (`title` ×5, `skills` ×4, `description`);
 compound indexes for the common filter/sort paths; unique `(job, worker)` on offers and
-`(booking, from)` on reviews.
+`(booking, from)` on reviews; and a **partial unique index on `Withdrawal.worker` filtered to
+`status: requested`**, which is what makes "one open withdrawal at a time" a guarantee rather than
+a race.
 
 ---
 
 ## Tests
 
 ```bash
-cd backend    && npm test      # 48 tests — auth, profiles, jobs, negotiation, escrow, reviews, AI, ranking loop
+cd backend    && npm test      # 126 tests across 14 files
 cd ai-service && pytest -q     # 30 tests — semantic matching, trust, pricing, coverage, monotonicity, fallbacks
 cd frontend   && npm run build # type/JSX + bundling check
 
 cd ai-service && python scripts/validate_models.py   # the promotion gate CI enforces
 ```
 
+| Suite | What it pins down |
+| --- | --- |
+| `auth`, `profile`, `jobs` | signup, role guards, profile CRUD, discovery filters |
+| `negotiation` | turn-taking, atomic accept, competing offers closing |
+| `directHire` | private job stays out of browse, outsiders get 403, accept books it |
+| `cancellation` | **where the money ends up** in each case — refunded early, refunded by agreement, still held when a request is declined |
+| `disputes` | both sides' statements, admin reads the thread but cannot post in it, decision requires a reason |
+| `withdrawals` | balances derive from real rows; two concurrent requests cannot withdraw the same money |
+| `notifications` | the right person is told, and one account cannot read another's |
+| `reviews`, `ai`, `ranking`, `history`, `admin` | ratings, fallbacks, the ranker's gates, seeded-history integrity |
+
 Backend tests run against an in-memory MongoDB (`mongodb-memory-server`, downloaded on first run)
 with Stripe, Cloudinary and the AI client mocked — no external services, no test keys needed.
+
+The money paths are asserted on the *payment record*, not on the HTTP status: a 200 that leaves
+escrow in the wrong state is the failure worth catching.
 
 ---
 
@@ -410,4 +548,8 @@ Full guide: **[DEPLOYMENT.md](DEPLOYMENT.md)**. In short:
   Connect with separate charges & transfers in a real deployment.
 - Offer acceptance uses atomic conditional updates rather than multi-document transactions
   (the free Atlas tier supports transactions; the in-memory test server does not).
-- Dispute resolution is a manual admin endpoint with no UI.
+- **Worker payouts stop at the platform account.** Stripe Connect is unavailable for Pakistan, so
+  the transfer is made by hand and recorded; the ledger is real, the rail is not automated.
+- ID verification is a human decision — no automated document or liveness checks.
+- The ranker ships as hand-set weights. The learning-to-rank loop is built and gated, and will not
+  promote a model until there is enough real behaviour to fit one honestly.
