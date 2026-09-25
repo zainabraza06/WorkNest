@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'screens/login_screen.dart';
 
 void main() {
   runApp(const WorkNestApp());
@@ -15,11 +16,7 @@ class WorkNestApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: const Scaffold(
-        body: Center(
-          child: Text('WorkNest Flutter App Initialized'),
-        ),
-      ),
+      home: const LoginScreen(),
     );
   }
 }
