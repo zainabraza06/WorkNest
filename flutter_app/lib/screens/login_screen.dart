@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
+import 'main_nav_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -15,12 +16,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _login() async {
     try {
-      final response = await _apiService.post('/auth/login', {
-        'email': _emailController.text,
-        'password': _passwordController.text,
-      });
+      // Dummy API call simulation
+      // final response = await _apiService.post('/auth/login', { ... });
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Login successful!')));
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainNavScreen()),
+        );
       }
     } catch (e) {
       if (mounted) {
