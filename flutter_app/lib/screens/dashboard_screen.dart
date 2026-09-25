@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'jobs_screen.dart';
+import 'bookings_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   const DashboardScreen({super.key});
@@ -15,13 +17,13 @@ class DashboardScreen extends StatelessWidget {
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
-                // Navigate to Jobs
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const JobsScreen()));
               },
               child: const Text('View Jobs'),
             ),
             ElevatedButton(
               onPressed: () {
-                // Navigate to Bookings
+                Navigator.of(context).push(MaterialPageRoute(builder: (_) => const BookingsScreen()));
               },
               child: const Text('View Bookings'),
             ),
