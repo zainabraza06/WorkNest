@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dashboard_screen.dart';
 import 'jobs_screen.dart';
+import 'earnings_screen.dart';
 import 'profile_screen.dart';
 
 class MainNavScreen extends StatefulWidget {
@@ -15,6 +16,7 @@ class _MainNavScreenState extends State<MainNavScreen> {
   final List<Widget> _screens = [
     const DashboardScreen(),
     const JobsScreen(),
+    const EarningsScreen(),
     const ProfileScreen(),
   ];
 
@@ -23,6 +25,7 @@ class _MainNavScreenState extends State<MainNavScreen> {
     return Scaffold(
       body: _screens[_currentIndex],
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
         currentIndex: _currentIndex,
         onTap: (index) {
           setState(() {
@@ -32,6 +35,7 @@ class _MainNavScreenState extends State<MainNavScreen> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: 'Dashboard'),
           BottomNavigationBarItem(icon: Icon(Icons.work), label: 'Jobs'),
+          BottomNavigationBarItem(icon: Icon(Icons.monetization_on), label: 'Earnings'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
         ],
       ),
