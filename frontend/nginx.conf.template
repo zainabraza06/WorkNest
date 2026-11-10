@@ -1,0 +1,53 @@
+# Rendered by the nginx image's entrypoint (envsubst) at container start, so the same image
+# can be promoted between environments. Only ${API_ORIGIN} is substituted; nginx's own $vars
+# (like $uri) are left alone because the entrypoint restricts substitution to defined env vars.
+server {
+    listen 8080;
+    server_name _;
+    root /usr/share/nginx/html;
+    server_tokens off;
+
+    # ── Security headers ───────────────────────────────────────────────────────────────
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "DENY" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+    add_header Permissions-Policy "camera=(), microphone=(), geolocation=(self), payment=(self)" always;
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+    # Report-Only first: watch the browser console for violations for a release or two,
+    # then rename to Content-Security-Policy to enforce. See docs/SECURITY.md.
+    add_header Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://res.cloudinary.com; connect-src 'self' ${API_ORIGIN} https://api.stripe.com; frame-src https://js.stripe.com https://hooks.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+
+    # Hashed filenames never change contents, so cache them hard.
+    # (add_header in a location block replaces the server-level ones, so repeat the essentials)
+    location /assets/ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        add_header X-Content-Type-Options "nosniff" always;
+        try_files $uri =404;
+    }
+
+    # Liveness for the container orchestrator; no logs, no cache
+    location = /healthz {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    # React Router owns the routes: a hard load of /workers/123 must return index.html,
+    # not a 404 for a file that was never built.
+    location / {
+        try_files $uri $uri/ /index.html;
+        add_header Cache-Control "no-cache";
+        add_header X-Content-Type-Options "nosniff" always;
+        add_header X-Frame-Options "DENY" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "camera=(), microphone=(), geolocation=(self), payment=(self)" always;
+        add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+        add_header Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://res.cloudinary.com; connect-src 'self' ${API_ORIGIN} https://api.stripe.com; frame-src https://js.stripe.com https://hooks.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+    }
+
+    gzip on;
+    gzip_vary on;
+    gzip_types text/css application/javascript application/json image/svg+xml;
+    gzip_min_length 1024;
+}

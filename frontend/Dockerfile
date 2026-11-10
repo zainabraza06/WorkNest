@@ -21,14 +21,17 @@ ENV VITE_API_URL=$VITE_API_URL \
 
 RUN npm run build
 
-FROM nginx:1.27-alpine
+# nginx-unprivileged runs as a non-root user and listens on 8080, so a compromise of the web
+# tier does not start from root and the container needs no NET_BIND_SERVICE capability.
+FROM nginxinc/nginx-unprivileged:1.27-alpine
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Templates in /etc/nginx/templates are rendered with envsubst at start-up. Limiting the
+# substituted variables keeps nginx's own $uri / $host from being eaten.
+ENV NGINX_ENVSUBST_FILTER=API_ORIGIN     API_ORIGIN=""
+
+COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
 
-EXPOSE 80
+EXPOSE 8080
 
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD wget -qO- http://127.0.0.1/ >/dev/null || exit 1
-
-CMD ["nginx", "-g", "daemon off;"]
+HEALTHCHECK --interval=30s --timeout=5s --retries=3   CMD wget -qO- http://127.0.0.1:8080/healthz >/dev/null || exit 1
