@@ -153,7 +153,7 @@ jobs:
     needs: [backend, ai-service, models, frontend, mobile, secrets]
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
       # Images are built into the local daemon (load: true) so they can be scanned before anyone
       # could push them. CRITICAL/HIGH findings with an available fix fail the build.
