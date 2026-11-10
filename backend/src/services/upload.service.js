@@ -1,5 +1,6 @@
 import { cloudinary, isCloudinaryConfigured } from '../config/cloudinary.js';
 import { ApiError } from '../utils/ApiError.js';
+import { logger } from '../observability/logger.js';
 
 function assertConfigured() {
   if (!isCloudinaryConfigured) {
@@ -39,7 +40,7 @@ export async function deleteAsset(publicId, { private: isPrivate = false } = {})
     await cloudinary.uploader.destroy(publicId, { type: isPrivate ? 'authenticated' : 'upload' });
   } catch (err) {
     // Orphaned assets are not worth failing a user request over
-    console.warn(`Failed to delete Cloudinary asset ${publicId}:`, err.message);
+    logger.warn({ publicId, err: err.message }, 'Failed to delete Cloudinary asset');
   }
 }
 

@@ -2,8 +2,9 @@ import { Server } from 'socket.io';
 import mongoose from 'mongoose';
 
 import { env } from '../config/env.js';
-import { Offer, User } from '../models/index.js';
-import { verifyToken } from '../utils/jwt.js';
+import { Offer } from '../models/index.js';
+import { resolveUser } from '../middleware/auth.js';
+import { socketConnections } from '../observability/metrics.js';
 
 let io = null;
 
@@ -24,9 +25,8 @@ export function initSocket(httpServer) {
     try {
       const token = socket.handshake.auth?.token;
       if (!token) throw new Error('missing token');
-      const { sub } = verifyToken(token);
-      const user = await User.findById(sub).select('_id name role isActive');
-      if (!user?.isActive) throw new Error('inactive');
+      // Same checks as REST: valid signature, active account, current token version
+      const user = await resolveUser(token);
       socket.data.user = user;
       next();
     } catch {
@@ -37,6 +37,8 @@ export function initSocket(httpServer) {
   io.on('connection', (socket) => {
     const userId = socket.data.user._id.toString();
     socket.join(`user:${userId}`);
+    socketConnections.inc();
+    socket.on('disconnect', () => socketConnections.dec());
 
     socket.on('thread:join', async (offerId, ack) => {
       const reply = typeof ack === 'function' ? ack : () => {};

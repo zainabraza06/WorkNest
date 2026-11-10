@@ -1,4 +1,5 @@
 import { SearchImpression } from '../models/index.js';
+import { logger } from '../observability/logger.js';
 
 /**
  * Collects the training data for the learning-to-rank model.
@@ -38,7 +39,7 @@ export async function recordImpression({ client, query, mode, category, city, bu
     });
     return impression._id;
   } catch (err) {
-    console.warn('Failed to log search impression:', err.message);
+    logger.warn({ err: err.message }, 'Failed to log search impression');
     return null;
   }
 }
@@ -60,7 +61,7 @@ export async function recordEvent({ impressionId, workerId, type, client }) {
     );
     return result.modifiedCount > 0;
   } catch (err) {
-    console.warn('Failed to record ranking event:', err.message);
+    logger.warn({ err: err.message }, 'Failed to record ranking event');
     return false;
   }
 }
@@ -80,7 +81,7 @@ export async function recordHire({ clientId, workerId }) {
       { $set: { 'results.$.hired': true } },
     );
   } catch (err) {
-    console.warn('Failed to attribute hire:', err.message);
+    logger.warn({ err: err.message }, 'Failed to attribute hire');
   }
 }
 

@@ -13,6 +13,7 @@ import {
   recordDispute,
   recordWorkerCancellation,
 } from '../services/booking.service.js';
+import { logger } from '../observability/logger.js';
 
 const REVEAL_CONTACT = [BOOKING_STATUS.CONFIRMED, BOOKING_STATUS.IN_PROGRESS, BOOKING_STATUS.COMPLETED, BOOKING_STATUS.DISPUTED];
 
@@ -183,7 +184,7 @@ export async function completeBooking(req, res) {
   payment.status = PAYMENT_STATUS.RELEASED;
   payment.releasedAt = new Date();
   await payment.save();
-  if (intent.status !== 'succeeded') console.warn(`Capture for ${intent.id} returned status ${intent.status}`);
+  if (intent.status !== 'succeeded') logger.warn({ intentId: intent.id, status: intent.status }, 'Stripe capture returned a non-succeeded status');
 
   pushTimeline(booking, BOOKING_STATUS.COMPLETED, req.user._id, 'Client confirmed completion; payment released');
   booking.completedAt = new Date();

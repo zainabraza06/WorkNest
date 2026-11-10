@@ -1,4 +1,6 @@
 import { env } from '../config/env.js';
+import { logger } from '../observability/logger.js';
+import { aiCalls } from '../observability/metrics.js';
 
 /**
  * Thin client for the FastAPI AI service.
@@ -14,7 +16,10 @@ const COOLDOWN_MS = 30_000;
 export const isAiEnabled = () => env.AI_ENABLED && Date.now() >= disabledUntil;
 
 async function post(path, body) {
-  if (!isAiEnabled()) return null;
+  if (!isAiEnabled()) {
+    aiCalls.inc({ endpoint: path, outcome: 'skipped' });
+    return null;
+  }
 
   try {
     const res = await fetch(`${env.AI_SERVICE_URL}${path}`, {
@@ -28,13 +33,16 @@ async function post(path, body) {
     });
 
     if (!res.ok) {
-      console.warn(`AI service ${path} responded ${res.status}`);
+      logger.warn({ path, status: res.status }, 'AI service returned an error status');
+      aiCalls.inc({ endpoint: path, outcome: 'error' });
       return null;
     }
+    aiCalls.inc({ endpoint: path, outcome: 'ok' });
     return await res.json();
   } catch (err) {
     disabledUntil = Date.now() + COOLDOWN_MS;
-    console.warn(`AI service ${path} unavailable (${err.message}); falling back for ${COOLDOWN_MS / 1000}s`);
+    logger.warn({ path, err: err.message, cooldownSeconds: COOLDOWN_MS / 1000 }, 'AI service unavailable; circuit opened, falling back');
+    aiCalls.inc({ endpoint: path, outcome: 'error' });
     return null;
   }
 }
@@ -83,7 +91,33 @@ export async function scoreTrust(features) {
   return { score: data.score, label: data.label, breakdown: data.breakdown, source: data.source };
 }
 
+// Price guidance is a pure function of six small inputs and is requested on every keystroke of
+// the post-job form, so identical questions are answered from memory. This cuts AI-service load
+// (and the latency a cold Render instance adds) without any staleness risk worth caring about:
+// the model only changes on deploy, and entries expire after ten minutes anyway.
+const PRICE_TTL_MS = 10 * 60 * 1000;
+const PRICE_CACHE_MAX = 500;
+const priceCache = new Map();
+
+export const clearPriceCache = () => priceCache.clear();
+
 export async function suggestPrice({ category, city, durationType, durationCount, urgency, experienceYears }) {
+  const key = [category, city, durationType, durationCount, urgency, experienceYears].join('|');
+  const hit = priceCache.get(key);
+  if (hit && hit.expires > Date.now()) {
+    aiCalls.inc({ endpoint: '/price/suggest', outcome: 'cache_hit' });
+    return hit.value;
+  }
+
+  const value = await fetchPrice({ category, city, durationType, durationCount, urgency, experienceYears });
+  if (value) {
+    if (priceCache.size >= PRICE_CACHE_MAX) priceCache.delete(priceCache.keys().next().value); // oldest first
+    priceCache.set(key, { value, expires: Date.now() + PRICE_TTL_MS });
+  }
+  return value;
+}
+
+async function fetchPrice({ category, city, durationType, durationCount, urgency, experienceYears }) {
   const data = await post('/price/suggest', {
     category,
     city: city ?? null,

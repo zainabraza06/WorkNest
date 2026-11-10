@@ -1,5 +1,6 @@
 import { Notification } from '../models/index.js';
 import { emitToUser } from '../socket/index.js';
+import { logger } from '../observability/logger.js';
 
 /**
  * Record something that happened to a user, and push it if they are connected.
@@ -15,7 +16,7 @@ export async function notify(user, { type, title, body, link }) {
     emitToUser(user, 'notification:new', notification);
     return notification;
   } catch (err) {
-    console.warn(`Could not record notification ${type}: ${err.message}`);
+    logger.warn({ type, err: err.message }, 'Could not record notification');
     return null;
   }
 }

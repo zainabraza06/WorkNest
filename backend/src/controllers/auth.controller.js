@@ -58,7 +58,14 @@ export async function changePassword(req, res) {
     throw ApiError.badRequest('Current password is incorrect');
   }
   user.password = newPassword;
+  user.tokenVersion += 1; // a changed password must kill every session an attacker may hold
   await user.save();
 
   res.json({ success: true, data: { token: signToken(user) } });
+}
+
+/** "Sign out everywhere": invalidates every token issued so far, on every device. */
+export async function logoutAll(req, res) {
+  await User.updateOne({ _id: req.user._id }, { $inc: { tokenVersion: 1 } });
+  res.json({ success: true, data: { loggedOut: true } });
 }

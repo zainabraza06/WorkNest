@@ -7,7 +7,7 @@ function extractToken(req) {
   return header.startsWith('Bearer ') ? header.slice(7) : null;
 }
 
-async function resolveUser(token) {
+export async function resolveUser(token) {
   let payload;
   try {
     payload = verifyToken(token);
@@ -16,6 +16,9 @@ async function resolveUser(token) {
   }
   const user = await User.findById(payload.sub);
   if (!user || !user.isActive) throw ApiError.unauthorized('Account not found or disabled');
+  // Tokens issued before tokenVersion existed carry no `tv`; they count as version 0, so the
+  // rollout does not sign anyone out, but the first password change revokes them.
+  if ((payload.tv ?? 0) !== (user.tokenVersion ?? 0)) throw ApiError.unauthorized('Session expired, please sign in again');
   return user;
 }
 

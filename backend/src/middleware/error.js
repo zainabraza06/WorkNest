@@ -2,13 +2,14 @@ import mongoose from 'mongoose';
 import { ZodError } from 'zod';
 import { ApiError } from '../utils/ApiError.js';
 import { env } from '../config/env.js';
+import { captureException } from '../observability/sentry.js';
 
 export function notFound(req, _res, next) {
   next(ApiError.notFound(`Route not found: ${req.method} ${req.originalUrl}`));
 }
 
 // eslint-disable-next-line no-unused-vars
-export function errorHandler(err, _req, res, _next) {
+export function errorHandler(err, req, res, _next) {
   let status = err.statusCode ?? 500;
   let message = err.message || 'Internal server error';
   let details = err.details;
@@ -32,11 +33,17 @@ export function errorHandler(err, _req, res, _next) {
     message = 'Malformed JSON body';
   }
 
-  if (status >= 500) console.error(err);
+  if (status >= 500) {
+    // pino-http attaches req.log with the request id already bound
+    (req.log ?? console).error({ err }, 'unhandled error');
+    captureException(err, { requestId: req.id, path: req.originalUrl });
+  }
 
   res.status(status).json({
     success: false,
     message: status >= 500 && env.isProd ? 'Internal server error' : message,
+    // Quote this when reporting a problem: it finds the exact request in the logs
+    requestId: req.id,
     ...(details && { details }),
     ...(!env.isProd && status >= 500 && { stack: err.stack }),
   });

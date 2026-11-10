@@ -1,5 +1,6 @@
 import { User, WorkerProfile } from '../models/index.js';
 import { scoreTrust } from './ai.service.js';
+import { logger } from '../observability/logger.js';
 
 /**
  * PLACEHOLDER Trust Score — a transparent weighted heuristic.
@@ -87,7 +88,7 @@ export async function refreshTrustScore(workerUserId) {
   try {
     result = await scorer(features);
   } catch (err) {
-    console.warn('Trust scorer failed, falling back to placeholder:', err.message);
+    logger.warn({ err: err.message }, 'Trust scorer failed, falling back to placeholder');
     result = computePlaceholderTrust(features);
   }
 

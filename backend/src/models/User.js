@@ -21,6 +21,9 @@ const userSchema = new mongoose.Schema(
       publicId: String,
     },
     isActive: { type: Boolean, default: true },
+    // Bumped on password change / "sign out everywhere". Tokens carry the version they were
+    // issued under, so bumping it revokes every outstanding JWT without a token blacklist.
+    tokenVersion: { type: Number, default: 0 },
     lastLoginAt: Date,
   },
   { timestamps: true },
@@ -39,6 +42,7 @@ userSchema.set('toJSON', {
   transform: (_doc, ret) => {
     delete ret.password;
     delete ret.__v;
+    delete ret.tokenVersion;
     return ret;
   },
 });

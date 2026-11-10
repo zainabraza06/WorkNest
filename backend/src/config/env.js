@@ -30,9 +30,36 @@ const schema = z.object({
     .default('true')
     .transform((v) => v === 'true'),
   AI_SERVICE_TIMEOUT_MS: z.coerce.number().int().positive().default(4000),
+
+  // ── Operations ──
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).optional(),
+  // Error tracking is opt-in: unset means the Sentry SDK is never initialised
+  SENTRY_DSN: z.string().url().optional().or(z.literal('').transform(() => undefined)),
+  SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0.05),
+  // Bearer token for GET /metrics. In production the endpoint stays disabled without one.
+  METRICS_TOKEN: z.string().min(16).optional().or(z.literal('').transform(() => undefined)),
+  DB_MAX_POOL_SIZE: z.coerce.number().int().min(1).max(200).default(20),
+  SHUTDOWN_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
+  // How many reverse proxies sit in front of the API (Render/Heroku = 1). Wrong values let
+  // clients spoof their IP and walk around the rate limiter.
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(1),
 });
 
-const parsed = schema.safeParse(process.env);
+// Rules that only matter once real users and real money are involved
+const productionRules = schema.superRefine((v, ctx) => {
+  if (v.NODE_ENV !== 'production') return;
+  if (v.JWT_SECRET.length < 32) {
+    ctx.addIssue({ code: 'custom', path: ['JWT_SECRET'], message: 'must be at least 32 characters in production' });
+  }
+  if (v.CLIENT_URL.split(',').some((o) => o.trim() === '*')) {
+    ctx.addIssue({ code: 'custom', path: ['CLIENT_URL'], message: 'wildcard origins are not allowed in production' });
+  }
+  if (/localhost|127\.0\.0\.1/.test(v.MONGODB_URI)) {
+    ctx.addIssue({ code: 'custom', path: ['MONGODB_URI'], message: 'must not point at localhost in production' });
+  }
+});
+
+const parsed = productionRules.safeParse(process.env);
 
 if (!parsed.success) {
   console.error('Invalid environment configuration:');
@@ -47,4 +74,5 @@ export const env = {
   clientOrigins: parsed.data.CLIENT_URL.split(',').map((o) => o.trim()),
   isProd: parsed.data.NODE_ENV === 'production',
   isTest: parsed.data.NODE_ENV === 'test',
+  logLevel: parsed.data.LOG_LEVEL ?? (parsed.data.NODE_ENV === 'test' ? 'silent' : parsed.data.NODE_ENV === 'production' ? 'info' : 'debug'),
 };
