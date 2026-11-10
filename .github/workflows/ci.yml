@@ -158,7 +158,7 @@ jobs:
       # Images are built into the local daemon (load: true) so they can be scanned before anyone
       # could push them. CRITICAL/HIGH findings with an available fix fail the build.
       - name: Build ai-service image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./ai-service
           load: true
@@ -167,7 +167,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build backend image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./backend
           load: true
@@ -176,7 +176,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build frontend image
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./frontend
           load: true
