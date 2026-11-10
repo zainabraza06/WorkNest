@@ -10,6 +10,13 @@ import { initSocket } from './socket/index.js';
 
 initSentry();
 
+if (env.misconfiguredEnv) {
+  logger.warn(
+    { NODE_ENV: env.NODE_ENV },
+    'Running on Render with NODE_ENV != production. Production protections are forced on, but set NODE_ENV=production in the service environment.',
+  );
+}
+
 async function start() {
   await connectDB(env.MONGODB_URI);
 

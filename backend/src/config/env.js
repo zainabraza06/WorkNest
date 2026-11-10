@@ -72,7 +72,12 @@ if (!parsed.success) {
 export const env = {
   ...parsed.data,
   clientOrigins: parsed.data.CLIENT_URL.split(',').map((o) => o.trim()),
-  isProd: parsed.data.NODE_ENV === 'production',
+  // Render sets RENDER=true on every service it runs. A service created by hand in the dashboard
+  // can easily be left on NODE_ENV=development, which silently turns off every production-only
+  // protection (stack-trace hiding, the closed /metrics endpoint). Being hosted somewhere real
+  // is treated as production for those behaviours, so forgetting the variable fails safe.
+  isProd: parsed.data.NODE_ENV === 'production' || process.env.RENDER === 'true',
+  misconfiguredEnv: process.env.RENDER === 'true' && parsed.data.NODE_ENV !== 'production',
   isTest: parsed.data.NODE_ENV === 'test',
   logLevel: parsed.data.LOG_LEVEL ?? (parsed.data.NODE_ENV === 'test' ? 'silent' : parsed.data.NODE_ENV === 'production' ? 'info' : 'debug'),
 };
