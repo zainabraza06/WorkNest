@@ -1,0 +1,72 @@
+# Render Blueprint — infrastructure as code for the two Render services.
+#
+# Creating the stack from this file (New → Blueprint) means the health check, auto-deploy and
+# environment contract are reviewed in a pull request instead of living in a dashboard nobody
+# remembers clicking through. Secrets are declared `sync: false`: Render prompts for them once
+# and they never enter git.
+#
+# The frontend deploys to Vercel (frontend/vercel.json); MongoDB is Atlas.
+
+services:
+  - type: web
+    name: worknest-api
+    runtime: node
+    rootDir: backend
+    plan: starter # the free plan sleeps after 15 min idle and cold-starts in ~50s; use a paid plan for real traffic
+    region: singapore # nearest Render region to Pakistan
+    buildCommand: npm ci --omit=dev
+    startCommand: node src/server.js
+    # Readiness, not liveness: a deploy only takes traffic once MongoDB answers a ping, and an
+    # instance that loses the database is pulled out of rotation instead of serving 500s.
+    healthCheckPath: /api/health/ready
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY_HOPS
+        value: '1' # Render terminates TLS with exactly one proxy
+      - key: LOG_LEVEL
+        value: info
+      - key: CLIENT_URL
+        sync: false # e.g. https://work-nest-z.vercel.app
+      - key: MONGODB_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true # 32+ random bytes, never leaves Render
+      - key: METRICS_TOKEN
+        generateValue: true
+      - key: AI_SERVICE_URL
+        fromService:
+          type: web
+          name: worknest-ai
+          property: hostport
+      - key: AI_SERVICE_KEY
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+
+  - type: web
+    name: worknest-ai
+    runtime: docker
+    rootDir: ai-service
+    plan: starter
+    region: singapore
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: SERVICE_API_KEY
+        sync: false # must equal AI_SERVICE_KEY on the API service
+      - key: ALLOWED_ORIGINS
+        value: https://worknest-api.onrender.com

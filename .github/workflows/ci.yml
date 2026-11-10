@@ -31,6 +31,13 @@ jobs:
 
       - run: npm ci
         working-directory: backend
+
+      # Known-vulnerable runtime dependencies fail the build. `--omit=dev` because a flaw in a
+      # test runner is not a flaw in what ships; Dependabot handles those on its own schedule.
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+        working-directory: backend
+
       - run: npm test
         working-directory: backend
 
@@ -101,23 +108,61 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
         working-directory: frontend
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+        working-directory: frontend
+      - run: npm test
+        working-directory: frontend
       - run: npm run build
         working-directory: frontend
+
+  mobile:
+    name: Flutter analyze + test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter pub get
+        working-directory: flutter_app
+      # Warnings fail the build: the lints catch un-awaited futures and use-after-dispose bugs
+      - run: flutter analyze --fatal-infos
+        working-directory: flutter_app
+      - run: flutter test
+        working-directory: flutter_app
+      # Proves the release configuration compiles (R8, INTERNET permission, signing fallbacks)
+      - run: flutter build apk --release --dart-define=API_URL=https://api.example.com
+        working-directory: flutter_app
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # scan history, not just the tip: a secret removed in a later commit is still leaked
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   docker:
     name: Docker images build
     runs-on: ubuntu-latest
-    needs: [backend, ai-service, models, frontend]
+    needs: [backend, ai-service, models, frontend, mobile, secrets]
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
 
-      # The AI image bakes in the models and asserts they load — that assertion is the point
+      # Images are built into the local daemon (load: true) so they can be scanned before anyone
+      # could push them. CRITICAL/HIGH findings with an available fix fail the build.
       - name: Build ai-service image
         uses: docker/build-push-action@v6
         with:
           context: ./ai-service
-          push: false
+          load: true
+          tags: worknest-ai:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -125,7 +170,8 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./backend
-          push: false
+          load: true
+          tags: worknest-api:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -133,7 +179,42 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: ./frontend
-          push: false
+          load: true
+          tags: worknest-web:ci
           build-args: VITE_API_URL=https://api.example.com
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Scan ai-service image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: worknest-ai:ci
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+
+      - name: Scan backend image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: worknest-api:ci
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+
+      - name: Scan frontend image
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: worknest-web:ci
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '1'
+
+      # The frontend image's config is only proven by actually serving a request through it
+      - name: Smoke-test the frontend container
+        run: |
+          docker run -d --name web -p 8080:8080 -e API_ORIGIN=https://api.example.com worknest-web:ci
+          for i in $(seq 1 20); do curl -fsS http://localhost:8080/healthz && break || sleep 1; done
+          curl -fsS http://localhost:8080/workers/123 | grep -q '<div id="root">'   # SPA fallback works
+          curl -sI http://localhost:8080/ | grep -qi 'x-content-type-options: nosniff'
+          curl -sI http://localhost:8080/ | grep -qi 'content-security-policy-report-only'
+          test "$(docker exec web id -u)" != "0"                                      # not root
