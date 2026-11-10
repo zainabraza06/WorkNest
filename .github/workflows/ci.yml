@@ -24,7 +24,7 @@ jobs:
 
       # mongodb-memory-server downloads a ~600 MB server binary on first run
       - name: Cache MongoDB binaries
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/mongodb-binaries
           key: mongodb-binaries-${{ runner.os }}
@@ -54,7 +54,7 @@ jobs:
 
       # The embedding model is ~67 MB; without this every run re-downloads it
       - name: Cache embedding model
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: /tmp/fastembed_cache
           key: fastembed-bge-small-${{ runner.os }}
