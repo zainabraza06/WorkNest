@@ -186,7 +186,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Scan ai-service image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: worknest-ai:ci
           severity: CRITICAL,HIGH
@@ -194,7 +194,7 @@ jobs:
           exit-code: '1'
 
       - name: Scan backend image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: worknest-api:ci
           severity: CRITICAL,HIGH
@@ -202,7 +202,7 @@ jobs:
           exit-code: '1'
 
       - name: Scan frontend image
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: worknest-web:ci
           severity: CRITICAL,HIGH
