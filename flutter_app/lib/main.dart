@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import 'core/error_reporting.dart';
 import 'core/theme.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/splash_screen.dart';
@@ -11,6 +12,7 @@ import 'widgets/transitions.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  ErrorReporting.install();
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
 
   final api = ApiClient();

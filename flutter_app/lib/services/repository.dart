@@ -76,6 +76,4 @@ class Repository {
 
   // Account
   Future<Json> updateMe(Json body) => _obj(api.patch('/users/me', body));
-  Future<Json> changePassword(String current, String next) =>
-      _obj(api.patch('/auth/password', {'currentPassword': current, 'newPassword': next}));
 }

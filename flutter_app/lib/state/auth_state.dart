@@ -80,6 +80,20 @@ class AuthState extends ChangeNotifier {
     _set(AuthStatus.signedIn);
   }
 
+  /// Changing the password revokes every other session server-side and returns a fresh token
+  /// for this one, which must replace the stored token or the next request signs us out.
+  Future<void> changePassword(String current, String next) async {
+    final data = await api.patch('/auth/password', {'currentPassword': current, 'newPassword': next}) as Json;
+    api.token = data['token'] as String;
+    await _storage.write(key: _tokenKey, value: api.token);
+  }
+
+  /// Revokes every token for this account (all devices), then returns to the login screen.
+  Future<void> signOutEverywhere() async {
+    await api.post('/auth/logout-all');
+    await signOut();
+  }
+
   Future<void> refreshMe() async {
     final me = await api.get('/auth/me') as Json;
     user = me['user'] as Json?;

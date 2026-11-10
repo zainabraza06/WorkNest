@@ -13,12 +13,14 @@ import 'worker_profile_form_screen.dart';
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
-  Future<void> _signOut(BuildContext context) async {
+  Future<void> _signOut(BuildContext context, {bool everywhere = false}) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Sign out?'),
-        content: const Text('You will need to sign in again to see your jobs and offers.'),
+        title: Text(everywhere ? 'Sign out everywhere?' : 'Sign out?'),
+        content: Text(everywhere
+            ? 'This ends your session on every phone and browser where you are signed in.'
+            : 'You will need to sign in again to see your jobs and offers.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Stay')),
           TextButton(
@@ -31,7 +33,16 @@ class ProfileScreen extends StatelessWidget {
     );
     if (ok != true || !context.mounted) return;
     final navigator = Navigator.of(context);
-    await context.read<AuthState>().signOut();
+    final auth = context.read<AuthState>();
+    if (everywhere) {
+      try {
+        await auth.signOutEverywhere();
+      } catch (_) {
+        await auth.signOut(); // offline: still end this device's session
+      }
+    } else {
+      await auth.signOut();
+    }
     navigator.pushAndRemoveUntil(fadeScaleRoute(const LoginScreen()), (_) => false);
   }
 
@@ -79,6 +90,10 @@ class ProfileScreen extends StatelessWidget {
             icon: const Icon(Icons.logout),
             label: const Text('Sign out'),
           ),
+          TextButton(
+            onPressed: () => _signOut(context, everywhere: true),
+            child: const Text('Sign out of all devices', style: TextStyle(color: Palette.ink500)),
+          ),
           const SizedBox(height: 24),
           Center(child: Text('WorkNest 1.0.0', style: Theme.of(context).textTheme.bodySmall)),
         ],
@@ -117,7 +132,7 @@ class ProfileScreen extends StatelessWidget {
   }
 
   Future<void> _changePassword(BuildContext context) async {
-    final repo = context.read<Repository>();
+    final auth = context.read<AuthState>();
     final current = TextEditingController();
     final next = TextEditingController();
     final saved = await showModalBottomSheet<bool>(
@@ -132,7 +147,7 @@ class ProfileScreen extends StatelessWidget {
             TextField(controller: current, obscureText: true, decoration: const InputDecoration(labelText: 'Current password')),
             TextField(controller: next, obscureText: true, decoration: const InputDecoration(labelText: 'New password', helperText: '8+ characters with a letter and a number')),
           ],
-          onSubmit: () => repo.changePassword(current.text, next.text),
+          onSubmit: () => auth.changePassword(current.text, next.text),
         ),
       ),
     );
