@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { Toaster } from '@/components/feedback/Toaster';
 import { RealtimeBridge } from '@/realtime/RealtimeBridge';
 import { Logo } from './Logo';
+import { WelcomeTransition } from './WelcomeTransition';
 
 function navFor(role) {
   if (role === 'worker') {
@@ -102,6 +103,7 @@ export function AppLayout() {
   const user = useAuthStore((s) => s.user);
   useSessionSync();
   const items = navFor(user?.role);
+  const location = useLocation();
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -161,8 +163,13 @@ export function AppLayout() {
       </header>
 
       <main id="main" className={cn('flex-1', user && 'pb-16 md:pb-0')}>
-        <Outlet />
+        {/* Keyed on the section so moving between sections fades in, but selecting an item
+            inside one (e.g. a thread under /negotiations) doesn't remount the whole page. */}
+        <div key={location.pathname.split('/')[1] || 'home'} className="animate-fade">
+          <Outlet />
+        </div>
       </main>
+      <WelcomeTransition />
 
       <footer className="hidden border-t border-ink-200 bg-ink-50 md:block">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-6">

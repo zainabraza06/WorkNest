@@ -110,7 +110,24 @@
   --animate-marquee: marquee 40s linear infinite;
   --animate-glow: glow 14s ease-in-out infinite;
 
+  --animate-tile-pop: tile-pop 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  --animate-draw-w: draw-w 0.7s 0.25s cubic-bezier(0.65, 0, 0.35, 1) both;
+  --animate-overlay-out: overlay-out 0.5s 1s ease forwards;
+
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+
+  @keyframes tile-pop {
+    from { opacity: 0; transform: scale(0.6); }
+    to { opacity: 1; transform: none; }
+  }
+  /* The W is a single path of length ~45 in the 28-unit grid; pathLength=1 normalises it */
+  @keyframes draw-w {
+    from { stroke-dashoffset: 1; }
+    to { stroke-dashoffset: 0; }
+  }
+  @keyframes overlay-out {
+    to { opacity: 0; visibility: hidden; }
+  }
 
   @keyframes shimmer {
     0% { background-position: -400px 0; }

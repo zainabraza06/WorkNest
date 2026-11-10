@@ -19,6 +19,7 @@ export function useLogin() {
     mutationFn: authApi.login,
     onSuccess: (session, _vars, _ctx) => {
       setSession(session);
+      useAuthStore.getState().setWelcome(true);
       const redirect = new URLSearchParams(window.location.search).get('redirect');
       navigate(redirect?.startsWith('/') ? redirect : homePathFor(session.user, session.profile), { replace: true });
     },
@@ -32,6 +33,7 @@ export function useRegister() {
     mutationFn: authApi.register,
     onSuccess: (session) => {
       setSession(session);
+      useAuthStore.getState().setWelcome(true);
       navigate('/onboarding', { replace: true });
     },
   });
