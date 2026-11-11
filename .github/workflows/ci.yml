@@ -121,8 +121,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      # Pinned, not "latest stable": Flutter 3.50 deprecated package:flutter/material.dart (the
+      # import used across the whole app), which `--fatal-infos` turns into a failed build the day
+      # a new stable ships. Move to a newer SDK deliberately, with the migration, not by accident.
       - uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.47.9'
           channel: stable
           cache: true
       - run: flutter pub get
