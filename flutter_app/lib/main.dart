@@ -8,6 +8,8 @@ import 'screens/auth/login_screen.dart';
 import 'screens/splash_screen.dart';
 import 'services/repository.dart';
 import 'state/auth_state.dart';
+import 'state/server_wake_state.dart';
+import 'widgets/server_wake_overlay.dart';
 import 'widgets/transitions.dart';
 
 void main() {
@@ -22,6 +24,8 @@ void main() {
         Provider<ApiClient>.value(value: api),
         Provider<Repository>(create: (_) => Repository(api)),
         ChangeNotifierProvider<AuthState>(create: (_) => AuthState(api)),
+        // Detects a sleeping free-tier server and tells the user, instead of an endless spinner
+        ChangeNotifierProvider<ServerWakeState>(create: (_) => ServerWakeState()..start()),
       ],
       child: const WorkNestApp(),
     ),
@@ -70,7 +74,7 @@ class _WorkNestAppState extends State<WorkNestApp> {
         theme: buildTheme(),
         builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
           value: SystemUiOverlayStyle.dark.copyWith(statusBarColor: Colors.transparent),
-          child: child!,
+          child: Stack(children: [child!, const ServerWakeOverlay()]),
         ),
         home: const SplashScreen(),
       );

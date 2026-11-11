@@ -97,7 +97,13 @@ with a live timer and an explanation of the free tier; when the server answers i
 **"Server is up. You can continue working"** with a **Continue** button. "Browse while waiting"
 dismisses it early, and after three silent minutes it offers **Try again**. A server that answered
 within the last 10 minutes in the same tab is trusted, so the check is not repeated on every
-navigation. Screenshots: `docs/screenshots/15-server-waking.png`, `16-server-ready-continue.png`.
+navigation. Screenshots: `docs/screenshots/15-server-waking.png`, `16-server-ready-continue.png` (web) and `docs/screenshots/mobile/12-server-waking.png`, `13-server-ready-continue.png` (app).
+
+The **mobile app does the same** (`flutter_app/lib/state/server_wake_state.dart` and
+`lib/widgets/server_wake_overlay.dart`): it checks readiness at launch, stays invisible when the
+server answers within about 1.5 s, and otherwise shows the same waking, ready and retry cards.
+Its request timeout is 60 s so the first sign-in after a quiet spell does not fail while the
+server boots.
 
 **Limits you should know:**
 - It cannot wake a service that is already asleep (a sleeping process runs no timers). After a
