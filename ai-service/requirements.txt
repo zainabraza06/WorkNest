@@ -10,4 +10,4 @@ joblib>=1.4
 
 # ── Semantic search: local ONNX embeddings, no torch and no LLM API ──
 # Downloads ~130MB of model weights to ~/.cache on first use; falls back to lexical without it.
-fastembed>=0.4
+fastembed>=0.9.1
