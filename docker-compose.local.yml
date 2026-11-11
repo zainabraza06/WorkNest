@@ -1,0 +1,39 @@
+# Fully local stack: adds a throwaway MongoDB and points the API at it, so nothing touches Atlas.
+#
+#   export METRICS_TOKEN=$(openssl rand -hex 24); printf '%s' "$METRICS_TOKEN" > ops/metrics_token
+#   GRAFANA_PASSWORD=change-me docker compose \
+#     -f docker-compose.yml -f docker-compose.observability.yml -f docker-compose.local.yml up -d --build
+#   cd backend && MONGODB_URI=mongodb://127.0.0.1:27017/worknest npm run seed
+#
+#   web http://localhost:8080 · api http://localhost:5000 · ai http://localhost:8000/docs
+#   Grafana http://localhost:3000 · Prometheus http://localhost:9090 · Alertmanager http://localhost:9093
+#
+# Combine with docker-compose.observability.yml (it provides Redis, Prometheus, Grafana). The
+# credentials in backend/.env (JWT, Stripe test key, Cloudinary) are still read from that file;
+# only the database and the metrics token are overridden here.
+
+services:
+  mongo:
+    image: mongo:7
+    ports: ['127.0.0.1:27017:27017'] # published so `npm run seed` can reach it from the host
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', 'db.adminCommand("ping").ok']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    environment:
+      MONGODB_URI: mongodb://mongo:27017/worknest
+      METRICS_TOKEN: ${METRICS_TOKEN:?set METRICS_TOKEN (and write the same value to ops/metrics_token)}
+      # k6 and tests send X-Forwarded-For to model many clients; trust exactly one hop, as on Render
+      TRUST_PROXY_HOPS: '1'
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+volumes:
+  mongo-data:

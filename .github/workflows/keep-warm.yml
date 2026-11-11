@@ -2,16 +2,21 @@ name: Keep services warm
 
 # Render's free tier spins a service down after ~15 minutes of no inbound traffic. A cold AI
 # service takes ~30s to wake — longer than the backend's request timeout — so the first search
-# after an idle period silently falls back to keyword results. Pinging both endpoints keeps
-# that from ever happening.
+# after an idle period silently falls back to keyword results.
 #
-# It doubles as an uptime check: if the AI path is down, this run fails and GitHub emails you.
+# IMPORTANT: this workflow is an uptime CHECK and a manual wake-up, not a keep-alive. GitHub
+# throttles scheduled workflows heavily (the run history shows it firing every several hours
+# despite the cron below), so it cannot hold a 15-minute idle window open. The reliable
+# mechanism is the API's own KEEP_ALIVE setting (docs/MONITORING.md, "Keeping free-tier
+# services awake"), optionally with an external pinger such as cron-job.org or UptimeRobot.
+#
+# It fails, and GitHub emails you, if the AI path or the database is down.
 #
 # Run it manually from the Actions tab ("Run workflow") a few minutes before a demo.
 
 on:
   schedule:
-    - cron: '*/10 * * * *' # every 10 minutes (GitHub may delay this under load — that's fine)
+    - cron: '*/10 * * * *' # best effort only: GitHub runs this far less often than requested
   workflow_dispatch:
 
 jobs:

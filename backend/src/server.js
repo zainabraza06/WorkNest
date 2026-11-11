@@ -4,6 +4,7 @@ import { connectDB, disconnectDB } from './config/db.js';
 import { env } from './config/env.js';
 import { closeRedis } from './config/redis.js';
 import { createApp } from './app.js';
+import { startKeepAlive } from './keepAlive.js';
 import { beginShutdown } from './lifecycle.js';
 import { logger } from './observability/logger.js';
 import { captureException, flushSentry, initSentry } from './observability/sentry.js';
@@ -33,6 +34,7 @@ async function start() {
   server.requestTimeout = 60_000;
 
   server.listen(env.PORT, () => logger.info({ port: env.PORT }, 'WorkNest API listening'));
+  const stopKeepAlive = startKeepAlive({ env, log: logger });
 
   let stopping = false;
   const shutdown = async (signal) => {
@@ -43,6 +45,7 @@ async function start() {
     // Fail readiness first so the load balancer stops sending new requests, then finish the
     // in-flight ones. Without this order a deploy drops requests that were already accepted.
     beginShutdown();
+    stopKeepAlive();
 
     const force = setTimeout(() => {
       logger.error('graceful shutdown timed out, forcing exit');

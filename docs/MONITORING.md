@@ -40,7 +40,7 @@ nodejs_eventloop_lag_p99_seconds > 0.2
 
 ```bash
 printf '%s' "$METRICS_TOKEN" > ops/metrics_token
-GRAFANA_PASSWORD=change-me docker compose -f docker-compose.yml -f docker-compose.observability.yml up --build
+GRAFANA_PASSWORD=change-me docker compose -f docker-compose.yml -f docker-compose.observability.yml -f docker-compose.local.yml up --build
 ```
 
 Grafana (localhost:3000) auto-loads the *WorkNest API* dashboard; Prometheus loads the alert
@@ -62,8 +62,39 @@ has a single hook, `ErrorReporting.onReport`, and the web `ErrorBoundary` calls
 
 ## Uptime
 
-- `.github/workflows/keep-warm.yml` pings `/health` of both services every 10 min and fails
-  (GitHub emails you) if the DB or AI models are not serving.
+- `.github/workflows/keep-warm.yml` checks both services and fails (GitHub emails you) if the DB
+  or AI models are not serving. **It does not keep Render awake on its own:** GitHub throttles
+  scheduled workflows (the `*/10` cron actually fires every several hours, see the run history),
+  while Render sleeps a free service after 15 idle minutes. Run it by hand before a demo.
+  The reliable mechanism is the in-app keep-alive below.
 - `scripts/smoke-test.sh <api> <web>` is the deeper post-deploy check (headers, CORS, auth,
   metrics lock-down). Run it after every release.
 - Point an external monitor (UptimeRobot / Better Stack) at `/api/health/ready`.
+
+## Keeping free-tier services awake
+
+Render's free tier sleeps a web service after ~15 minutes without inbound traffic, and the next
+request waits 30 to 50 s. Setting `KEEP_ALIVE=true` on the API makes it call its **own public
+URL and the AI service** every 10 minutes while it is awake (`backend/src/keepAlive.js`, covered
+by `tests/keepAlive.test.js`). That is real inbound traffic, so the idle clock never expires,
+with no third-party account.
+
+| Variable | Meaning |
+| --- | --- |
+| `KEEP_ALIVE` | `true` to enable (default off) |
+| `KEEP_ALIVE_INTERVAL_SEC` | ping period, 60 to 840 (default 600; must stay under Render's 15 min) |
+| `KEEP_ALIVE_HOURS` | optional daily window, e.g. `8-20`; outside it nothing is pinged so the services sleep |
+| `KEEP_ALIVE_TZ` | time zone for the window (default `Asia/Karachi`) |
+| `KEEP_ALIVE_URLS` | extra comma-separated URLs to ping (e.g. a status page) |
+
+`RENDER_EXTERNAL_URL` is set by Render automatically; locally nothing is pinged.
+
+**Limits you should know:**
+- It cannot wake a service that is already asleep (a sleeping process runs no timers). After a
+  deploy or a long outage the first visitor, or an external pinger such as cron-job.org or
+  UptimeRobot calling `/api/health/live` every 5 minutes, wakes it, and the keep-alive holds it from there.
+- **Free-hours budget.** Render's free tier gives a workspace about 750 instance-hours a month
+  (check your Billing page). One service awake 24/7 is 720 h; **two (API plus AI) is ~1,440 h and
+  exhausts the budget around day 15**, after which Render suspends them until next month. With
+  `KEEP_ALIVE_HOURS=8-20` the pair uses about 735 h. A paid plan (`render.yaml` already targets
+  one) removes the sleeping, and the budget, entirely; then leave `KEEP_ALIVE` off.

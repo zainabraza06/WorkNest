@@ -26,7 +26,6 @@ AI service [worknest-ai.onrender.com](https://worknest-ai.onrender.com/health)
 - [Runbook: deploy, rollback, incidents, backups](docs/RUNBOOK.md)
 - [Security controls and known gaps](docs/SECURITY.md)
 - [Performance and scale testing: measured load, stress and end-to-end results](docs/PERFORMANCE.md)
-- [Interview guide: pitch, design decisions, trade-offs, Q&A](docs/INTERVIEW.md)
 - `scripts/smoke-test.sh` (post-deploy checks), `loadtest/k6-api.js` (latency budgets)
 
 ## Tech stack
@@ -500,6 +499,7 @@ Never commit real values — `.env` is gitignored and `.env.example` is the temp
 | `STRIPE_WEBHOOK_SECRET`, `STRIPE_CURRENCY` | | `pkr` by default |
 | `AI_SERVICE_URL`, `AI_SERVICE_KEY`, `AI_ENABLED`, `AI_SERVICE_TIMEOUT_MS` | | AI service connection |
 | `REDIS_URL` | | `redis://` / `rediss://`. Shares rate-limit counters and Socket.io rooms across instances; unset = in-memory, single instance. A Redis outage fails open |
+| `KEEP_ALIVE` | | `true` makes the API ping its own public URL and the AI service every `KEEP_ALIVE_INTERVAL_SEC` (default 600) so Render's free tier never idles them. Default off. Also `KEEP_ALIVE_HOURS` (e.g. `8-20`, in `KEEP_ALIVE_TZ`, default `Asia/Karachi`) to let the services sleep outside a daily window; see [Keeping free-tier services awake](docs/MONITORING.md#keeping-free-tier-services-awake) |
 | `METRICS_TOKEN` | prod | Bearer token for `GET /metrics` (≥ 16 chars). Without it the endpoint is closed in production |
 | `SENTRY_DSN`, `SENTRY_TRACES_SAMPLE_RATE` | | Error tracking; off when unset |
 | `LOG_LEVEL`, `TRUST_PROXY_HOPS`, `DB_MAX_POOL_SIZE`, `SHUTDOWN_TIMEOUT_MS` | | Defaults: info, 1 (Render), 20, 15000 |
@@ -584,7 +584,7 @@ a race.
 ## Tests
 
 ```bash
-cd backend    && npm test                # 154 tests across 16 files (npm run test:coverage: ~88% lines, 80% floor enforced)
+cd backend    && npm test                # 168 tests across 17 files (npm run test:coverage: ~88% lines, 80% floor enforced)
 cd ai-service && pytest -q               # 30 tests — semantic matching, trust, pricing, coverage, monotonicity, fallbacks
 cd frontend   && npm test && npm run build   # 25 unit/component tests + bundling check
 cd flutter_app && flutter analyze && flutter test   # 22 tests
@@ -612,7 +612,7 @@ cd ai-service && python scripts/validate_models.py   # the promotion gate CI enf
 
 | Suite | Result |
 | --- | --- |
-| Backend (Vitest + Supertest) | **154 / 154** passed, 16 files; coverage 87.6% lines, 83.6% statements, 82.9% functions, 66.7% branches |
+| Backend (Vitest + Supertest) | **168 / 168** passed, 17 files; coverage 87.6% lines, 83.6% statements, 82.9% functions, 66.7% branches |
 | AI service (pytest) | **30 / 30** passed |
 | Web (Vitest) + production build | **25 / 25** passed, build OK |
 | Mobile (`flutter analyze` + `flutter test`) | no analyzer issues, **22 / 22** passed; also run on an Android emulator against the live API (sign-in, browse, negotiate, post a job, worker earnings) |

@@ -83,9 +83,12 @@ services:
       API_ORIGIN: http://localhost:5000
     # nginx-unprivileged renders its config from a template at start-up and keeps temp files
     # under /tmp; it needs those two paths writable on top of the read-only root filesystem.
+    # The container runs as uid 101 (nginx-unprivileged). A tmpfs is root-owned by default, so
+    # without uid/gid the entrypoint reports "/etc/nginx/conf.d is not writable", never renders
+    # the config, and nginx starts with nothing to listen on.
     tmpfs:
-      - /tmp
-      - /etc/nginx/conf.d
+      - /tmp:uid=101,gid=101,mode=1777
+      - /etc/nginx/conf.d:uid=101,gid=101,mode=0755
     ports:
       - '8080:8080'
     depends_on:

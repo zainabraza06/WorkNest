@@ -17,14 +17,17 @@ Read the numbers as *indicative*: a shared laptop is slower than a dedicated Ren
 some respects (CPU contention) and faster in others (a MongoDB on the same host, no network
 hop). Against Atlas, expect higher p95 on database-bound routes.
 
-Reproduce:
+Reproduce (everything in Docker, with a throwaway local MongoDB):
 
 ```bash
-GRAFANA_PASSWORD=change-me docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d --build
-cd backend && MONGODB_URI=mongodb://127.0.0.1:27017/worknest npm run seed   # seed the compose MongoDB (published on localhost:27017 by a local override file)
-docker run --rm --network worknest_default -v "$PWD/loadtest:/scripts" grafana/k6 run \
-  -e API=http://backend:5000 -e CLIENT_IPS=1 -e PROFILE=load /scripts/k6-api.js     # smoke | load | stress
+export METRICS_TOKEN=$(openssl rand -hex 24); printf '%s' "$METRICS_TOKEN" > ops/metrics_token
+GRAFANA_PASSWORD=change-me docker compose   -f docker-compose.yml -f docker-compose.observability.yml -f docker-compose.local.yml up -d --build
+(cd backend && MONGODB_URI=mongodb://127.0.0.1:27017/worknest npm run seed)
+docker run --rm --network worknest_default -v "$PWD/loadtest:/scripts" grafana/k6 run   -e API=http://backend:5000 -e CLIENT_IPS=1 -e PROFILE=load /scripts/k6-api.js     # smoke | load | stress
 ```
+
+`docker-compose.local.yml` adds the MongoDB and points the API at it, so nothing touches Atlas.
+Web is on :8080, API :5000, AI :8000, Grafana :3000, Prometheus :9090, Alertmanager :9093.
 
 (`CLIENT_IPS=1` only works with `TRUST_PROXY_HOPS=1`, which is how Render runs the API.)
 
@@ -101,6 +104,11 @@ STRIPE_SECRET_KEY=sk_test_... METRICS_TOKEN=... node scripts/e2e.mjs http://loca
 - **Fixed:** `docker-compose.observability.yml` crash-looped Redis (`setpriv: Operation not
   permitted`): the image's entrypoint drops root privileges itself, which `cap_drop: ALL`
   forbids. The service now starts as the unprivileged `redis` user.
+- **Fixed:** the hardened `docker-compose.yml` never served the web app. The nginx container
+  runs as uid 101 but its tmpfs for the rendered config was root-owned, so the entrypoint logged
+  `/etc/nginx/conf.d is not writable`, rendered no config, and nginx listened on nothing (the
+  container stayed `unhealthy`). The tmpfs mounts now set `uid=101,gid=101`. CI had not caught it
+  because its container smoke test does not use the read-only filesystem.
 - **Fixed:** the admin ID-verification row rendered `[object Object]` instead of the worker's category.
 - **Known limit:** the failed-login probe exceeds the 20-per-15-minutes credential limit per
   user over a long run, so a few `429`s are expected and tolerated by the test.
