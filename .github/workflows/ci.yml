@@ -15,7 +15,7 @@ jobs:
     name: Backend tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -45,7 +45,7 @@ jobs:
     name: AI service tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -70,7 +70,7 @@ jobs:
     name: Model validation gate
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -100,7 +100,7 @@ jobs:
     name: Frontend build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
@@ -120,7 +120,7 @@ jobs:
     name: Flutter analyze + test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Pinned, not "latest stable": Flutter 3.50 deprecated package:flutter/material.dart (the
       # import used across the whole app), which `--fatal-infos` turns into a failed build the day
       # a new stable ships. Move to a newer SDK deliberately, with the migration, not by accident.
@@ -144,7 +144,7 @@ jobs:
     name: Secret scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # scan history, not just the tip: a secret removed in a later commit is still leaked
       - uses: gitleaks/gitleaks-action@v2
@@ -156,7 +156,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [backend, ai-service, models, frontend, mobile, secrets]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v3
 
       # Images are built into the local daemon (load: true) so they can be scanned before anyone

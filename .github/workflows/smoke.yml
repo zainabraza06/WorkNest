@@ -17,7 +17,7 @@ jobs:
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Give Render/Vercel a few minutes to finish deploying the commit that just passed CI
       - name: Wait for deploy
         if: github.event_name == 'workflow_run'
