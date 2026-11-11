@@ -648,7 +648,8 @@ Full guide: **[DEPLOYMENT.md](DEPLOYMENT.md)**. In short:
 
 - **CI** (`.github/workflows/ci.yml`): backend tests + coverage floor + `npm audit` gate, frontend
   tests/build/audit, AI tests and model gate, Flutter analyze/test/APK build, gitleaks, Docker
-  builds with Trivy scans and a container smoke test. Dependabot opens weekly update PRs.
+  builds with Trivy scans and a container smoke test. Routine dependency-update PRs are off; the
+  `npm audit` gate fails the build on known vulnerabilities.
 - **Observability**: JSON logs with request ids, Prometheus `/metrics`, Grafana dashboard and
   alert rules in `ops/` (`docker compose -f docker-compose.yml -f docker-compose.observability.yml up`).
 - **Scaling**: set `REDIS_URL` to run more than one API instance.

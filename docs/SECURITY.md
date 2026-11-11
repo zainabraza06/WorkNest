@@ -11,7 +11,7 @@
 | Transport | HSTS; mobile uses HTTPS only; CORS limited to configured origins (verified by smoke test) |
 | Headers | API: CSP `default-src 'none'`, nosniff, no-referrer, `no-store`. Web: DENY framing, HSTS, Permissions-Policy, CSP (report-only) |
 | Secrets | env-only; redacted in logs; gitleaks in CI; mobile token in Keychain/Keystore (`flutter_secure_storage`); Stripe **test keys enforced** |
-| Supply chain | `npm audit` gate in CI, Dependabot weekly, Trivy image scan, non-root containers, read-only FS in compose |
+| Supply chain | `npm audit` gate in CI, Dependabot security updates (a GitHub setting, off by default), Trivy image scan, non-root containers, read-only FS in compose |
 | Config safety | production boot refuses short `JWT_SECRET`, wildcard CORS, localhost DB; Render-hosted = production-mode even if `NODE_ENV` is forgotten |
 | Privacy | ID documents are signed private assets; Sentry runs with `sendDefaultPii: false` |
 

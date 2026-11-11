@@ -33,7 +33,7 @@ jobs:
         working-directory: backend
 
       # Known-vulnerable runtime dependencies fail the build. `--omit=dev` because a flaw in a
-      # test runner is not a flaw in what ships; Dependabot handles those on its own schedule.
+      # test runner is not a flaw in what ships; upgrade those deliberately.
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
         working-directory: backend

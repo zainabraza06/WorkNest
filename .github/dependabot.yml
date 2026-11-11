@@ -1,38 +1,40 @@
-# Automated dependency updates. The 0-vulnerability state this repo reached with `npm audit fix`
-# decays within weeks unless something keeps it there; this is that something. Monthly, so a
-# finished project gets one batch to review instead of a weekly stream of pull requests.
+# Scheduled version-update pull requests are switched OFF (open-pull-requests-limit: 0): for a
+# finished project they are a weekly stream of noise (the first run opened 19 at once).
+#
+# This does not turn off security updates. Dependabot *security* updates are a separate GitHub
+# setting (Settings > Code security > Dependabot security updates) and open a PR only when a
+# dependency has a known vulnerability. CI also fails on `npm audit` findings.
+#
+# To resume routine updates, raise the limits and add a schedule, for example
+#   schedule: { interval: monthly }
 version: 2
 updates:
   - package-ecosystem: npm
     directory: /backend
     schedule: { interval: monthly }
-    open-pull-requests-limit: 5
-    groups:
-      minor-and-patch:
-        update-types: [minor, patch]
+    open-pull-requests-limit: 0
 
   - package-ecosystem: npm
     directory: /frontend
     schedule: { interval: monthly }
-    open-pull-requests-limit: 5
-    groups:
-      minor-and-patch:
-        update-types: [minor, patch]
+    open-pull-requests-limit: 0
 
   - package-ecosystem: pip
     directory: /ai-service
     schedule: { interval: monthly }
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 0
 
   - package-ecosystem: pub
     directory: /flutter_app
     schedule: { interval: monthly }
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 0
 
   - package-ecosystem: docker
     directories: [/backend, /frontend, /ai-service]
     schedule: { interval: monthly }
+    open-pull-requests-limit: 0
 
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: monthly }
+    open-pull-requests-limit: 0
