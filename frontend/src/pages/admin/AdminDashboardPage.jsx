@@ -171,7 +171,7 @@ function VerificationQueue() {
                 <p className="truncate font-semibold">{w.user.name}</p>
                 <p className="truncate text-sm text-ink-600">{w.headline}</p>
                 <p className="mt-1 text-xs text-ink-500">
-                  {w.city} · {w.categories?.map((c) => CATEGORY_MAP[c] ?? c).join(', ')} ·{' '}
+                  {w.city} · {w.categories?.map((c) => CATEGORY_MAP[c]?.label ?? c).join(', ')} ·{' '}
                   {w.stats?.completedJobs ?? 0} jobs completed · submitted {w.submittedAt ? timeAgo(w.submittedAt) : 'recently'}
                 </p>
               </div>
