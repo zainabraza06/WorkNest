@@ -431,16 +431,23 @@ Never commit real values — `.env` is gitignored and `.env.example` is the temp
 | Variable | Required | Notes |
 | --- | --- | --- |
 | `MONGODB_URI` | ✅ | Atlas connection string |
-| `JWT_SECRET` | ✅ | ≥ 16 chars |
+| `JWT_SECRET` | ✅ | ≥ 16 chars (**≥ 32 in production**, enforced at boot) |
 | `PORT`, `CLIENT_URL`, `NODE_ENV` | | Defaults: 5000, `http://localhost:5173`, development |
 | `CLOUDINARY_CLOUD_NAME` / `_API_KEY` / `_API_SECRET` | | Uploads return 503 without them |
 | `STRIPE_SECRET_KEY` | | **Must** start with `sk_test_` — validated at boot |
 | `STRIPE_WEBHOOK_SECRET`, `STRIPE_CURRENCY` | | `pkr` by default |
 | `AI_SERVICE_URL`, `AI_SERVICE_KEY`, `AI_ENABLED`, `AI_SERVICE_TIMEOUT_MS` | | AI service connection |
+| `REDIS_URL` | | `redis://` / `rediss://`. Shares rate-limit counters and Socket.io rooms across instances; unset = in-memory, single instance. A Redis outage fails open |
+| `METRICS_TOKEN` | prod | Bearer token for `GET /metrics` (≥ 16 chars). Without it the endpoint is closed in production |
+| `SENTRY_DSN`, `SENTRY_TRACES_SAMPLE_RATE` | | Error tracking; off when unset |
+| `LOG_LEVEL`, `TRUST_PROXY_HOPS`, `DB_MAX_POOL_SIZE`, `SHUTDOWN_TIMEOUT_MS` | | Defaults: info, 1 (Render), 20, 15000 |
 
 **`ai-service/.env`** — `ALLOWED_ORIGINS`, `SERVICE_API_KEY` (must match `AI_SERVICE_KEY`).
 
 **`frontend/.env`** — `VITE_API_URL` (blank in dev), `VITE_STRIPE_PUBLISHABLE_KEY` (`pk_test_…`).
+In the Docker image, `API_ORIGIN` (runtime) feeds the Content-Security-Policy `connect-src`.
+
+**Mobile** — build-time `--dart-define=API_URL=…` and `WEB_URL=…` (see `flutter_app/lib/core/config.dart`).
 
 ---
 
@@ -515,9 +522,13 @@ a race.
 ## Tests
 
 ```bash
-cd backend    && npm test      # 126 tests across 14 files
-cd ai-service && pytest -q     # 30 tests — semantic matching, trust, pricing, coverage, monotonicity, fallbacks
-cd frontend   && npm run build # type/JSX + bundling check
+cd backend    && npm test                # 154 tests across 16 files (npm run test:coverage: ~88% lines, 80% floor enforced)
+cd ai-service && pytest -q               # 30 tests — semantic matching, trust, pricing, coverage, monotonicity, fallbacks
+cd frontend   && npm test && npm run build   # 25 unit/component tests + bundling check
+cd flutter_app && flutter analyze && flutter test   # 18 tests
+
+bash scripts/smoke-test.sh <api> <web>   # post-deploy: headers, CORS, auth, /metrics lock-down
+k6 run -e API=<staging> loadtest/k6-api.js   # latency budgets as pass/fail thresholds
 
 cd ai-service && python scripts/validate_models.py   # the promotion gate CI enforces
 ```
@@ -532,6 +543,8 @@ cd ai-service && python scripts/validate_models.py   # the promotion gate CI enf
 | `withdrawals` | balances derive from real rows; two concurrent requests cannot withdraw the same money |
 | `notifications` | the right person is told, and one account cannot read another's |
 | `reviews`, `ai`, `ranking`, `history`, `admin` | ratings, fallbacks, the ranker's gates, seeded-history integrity |
+| `ops` | health probes, request ids, security headers, metrics cardinality, session revocation, price cache, production config guard, graceful drain |
+| `redis` | limiter works in memory and **fails open** when Redis errors |
 
 Backend tests run against an in-memory MongoDB (`mongodb-memory-server`, downloaded on first run)
 with Stripe, Cloudinary and the AI client mocked — no external services, no test keys needed.
@@ -545,7 +558,7 @@ escrow in the wrong state is the failure worth catching.
 
 Full guide: **[DEPLOYMENT.md](DEPLOYMENT.md)**. In short:
 
-- **Backend** → Render / Railway / Fly (Dockerfile provided). Set all env vars; the process
+- **Backend** → Render (`render.yaml` blueprint) / Railway / Fly (Dockerfile provided). Set all env vars; the process
   validates them at boot and exits with a readable error if anything is missing.
 - **AI service** → any Docker host. 512 MB RAM is enough (measured: 152 MB steady, 351 MB peak).
   Models and the embedding model ship inside the image, so cold starts don't download anything.
@@ -553,6 +566,16 @@ Full guide: **[DEPLOYMENT.md](DEPLOYMENT.md)**. In short:
 - **Frontend** → any static host; set `VITE_API_URL` to the deployed backend origin.
 - Set `CLIENT_URL` to the deployed frontend origin (comma-separated for multiple) so CORS and
   Socket.io accept it.
+
+### Production operations
+
+- **CI** (`.github/workflows/ci.yml`): backend tests + coverage floor + `npm audit` gate, frontend
+  tests/build/audit, AI tests and model gate, Flutter analyze/test/APK build, gitleaks, Docker
+  builds with Trivy scans and a container smoke test. Dependabot opens weekly update PRs.
+- **Observability**: JSON logs with request ids, Prometheus `/metrics`, Grafana dashboard and
+  alert rules in `ops/` (`docker compose -f docker-compose.yml -f docker-compose.observability.yml up`).
+- **Scaling**: set `REDIS_URL` to run more than one API instance.
+- Docs: [architecture](docs/ARCHITECTURE.md) · [monitoring](docs/MONITORING.md) · [runbook](docs/RUNBOOK.md) · [security](docs/SECURITY.md)
 
 ### Known limitations
 
@@ -562,6 +585,7 @@ Full guide: **[DEPLOYMENT.md](DEPLOYMENT.md)**. In short:
   (the free Atlas tier supports transactions; the in-memory test server does not).
 - **Worker payouts stop at the platform account.** Stripe Connect is unavailable for Pakistan, so
   the transfer is made by hand and recorded; the ledger is real, the rail is not automated.
+- The web CSP ships report-only until violations are reviewed; the JWT lives in localStorage (see [security](docs/SECURITY.md)).
 - ID verification is a human decision — no automated document or liveness checks.
 - The ranker ships as hand-set weights. The learning-to-rank loop is built and gated, and will not
   promote a model until there is enough real behaviour to fit one honestly.
