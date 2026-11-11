@@ -104,3 +104,10 @@ STRIPE_SECRET_KEY=sk_test_... METRICS_TOKEN=... node scripts/e2e.mjs http://loca
 - **Fixed:** the admin ID-verification row rendered `[object Object]` instead of the worker's category.
 - **Known limit:** the failed-login probe exceeds the 20-per-15-minutes credential limit per
   user over a long run, so a few `429`s are expected and tolerated by the test.
+- **Fixed (found by running the mobile app on an emulator):**
+  - the worker profile's category and skill chips rendered as empty pills (the chip theme set no label colour);
+  - the auth screens left a black band under the white sheet on tall phones;
+  - status-bar icons were dark on the near-black auth header;
+  - "1 offers" (no singular), now `countOf(1, 'offer')` with a test;
+  - skills that merely repeat a category label are hidden, as on the web;
+  - the API request timeout was 35 s, shorter than a Render free-tier cold start (measured 33 s from a warm laptop, ~50 s documented), so the first sign-in of the day could fail with "Unable to reach the server". It is now 60 s.

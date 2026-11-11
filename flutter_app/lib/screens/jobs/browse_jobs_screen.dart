@@ -207,7 +207,7 @@ class JobCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  Text('${job['offersCount'] ?? 0} offers', style: Theme.of(context).textTheme.bodySmall),
+                  Text(countOf((job['offersCount'] as num?) ?? 0, 'offer'), style: Theme.of(context).textTheme.bodySmall),
                 ],
               ),
             ],

@@ -43,3 +43,7 @@ String titleCase(String snake) => snake
     .where((p) => p.isNotEmpty)
     .map((p) => p[0].toUpperCase() + p.substring(1))
     .join(' ');
+
+/// "1 offer", "2 offers": the count with a correctly pluralised noun.
+String countOf(num n, String singular, [String? plural]) =>
+    '${n.toInt()} ${n == 1 ? singular : (plural ?? '${singular}s')}';

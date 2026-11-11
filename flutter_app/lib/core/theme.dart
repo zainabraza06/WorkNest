@@ -114,7 +114,7 @@ ThemeData buildTheme() {
       backgroundColor: Colors.white,
       selectedColor: Palette.ink950,
       side: const BorderSide(color: Palette.ink200),
-      labelStyle: const TextStyle(fontWeight: FontWeight.w600),
+      labelStyle: const TextStyle(fontWeight: FontWeight.w600, color: Palette.ink950),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
     ),
     navigationBarTheme: NavigationBarThemeData(

@@ -19,6 +19,8 @@ class AppConfig {
     defaultValue: 'https://work-nest-z.vercel.app',
   );
 
-  /// Render's free tier cold-starts in ~30s, so the first request needs headroom.
-  static const Duration requestTimeout = Duration(seconds: 35);
+  /// Render's free tier cold-starts in 30 to 50 s (measured 33 s from a warm laptop; the platform
+  /// documents ~50 s), so the first request after idle needs real headroom. A shorter timeout
+  /// makes the first sign-in of the day fail with "Unable to reach the server".
+  static const Duration requestTimeout = Duration(seconds: 60);
 }

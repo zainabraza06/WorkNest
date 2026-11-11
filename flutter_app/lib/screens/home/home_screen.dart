@@ -168,7 +168,7 @@ class _JobTile extends StatelessWidget {
                     Text(job['title'] as String,
                         maxLines: 1, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium),
                     const SizedBox(height: 4),
-                    Text('${formatBudget(job['budget'] as Json?)} · ${job['offersCount'] ?? 0} offers',
+                    Text('${formatBudget(job['budget'] as Json?)} · ${countOf((job['offersCount'] as num?) ?? 0, 'offer')}',
                         style: Theme.of(context).textTheme.bodySmall),
                   ],
                 ),

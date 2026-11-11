@@ -132,7 +132,7 @@ A **modular monolith** plus one separate service, on purpose. See `docs/ARCHITEC
 | Metric | Value | Source |
 | --- | --- | --- |
 | Backend tests | 154 passing, ~88% line coverage | `npm run test:coverage` |
-| AI / web / mobile tests | 30 / 25 / 18 passing | pytest / vitest / flutter test |
+| AI / web / mobile tests | 30 / 25 / 22 passing | pytest / vitest / flutter test |
 | End-to-end feature checks | **64 of 64** over real HTTP, including real Stripe test-mode escrow, disputes, payouts, Socket.io | `scripts/e2e.mjs` |
 | Load test (50 concurrent users, 3 min hold) | 11,591 requests, **0% errors**, p95 **34 ms**, p99 **108 ms** | k6 `PROFILE=load` |
 | Stress test (to 400 users) | peak **~238 req/s** on one 1-CPU / 512 MB instance; **0 5xx**; p95 1.13 s, p99 1.89 s | k6 `PROFILE=stress` |

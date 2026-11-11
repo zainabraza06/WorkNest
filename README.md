@@ -68,6 +68,23 @@ Captured from the live deployment.
 | ![Grafana dashboard under load](docs/screenshots/13-grafana-dashboard.png) | ![Prometheus alert rules](docs/screenshots/14-prometheus-alerts.png) |
 | **Grafana** during a 400-user stress run | **Prometheus** alert rules |
 
+### Mobile app (Flutter, running on an Android emulator against the live API)
+
+<p>
+  <img src="docs/screenshots/mobile/01-login.png" width="170" alt="Login">
+  <img src="docs/screenshots/mobile/02-home.png" width="170" alt="Client home">
+  <img src="docs/screenshots/mobile/03-find-workers.png" width="170" alt="Find workers">
+  <img src="docs/screenshots/mobile/04-worker-profile.png" width="170" alt="Worker profile">
+  <img src="docs/screenshots/mobile/06-negotiation.png" width="170" alt="Negotiation">
+</p>
+<p>
+  <img src="docs/screenshots/mobile/07-post-job.png" width="170" alt="Post a job">
+  <img src="docs/screenshots/mobile/05-offers.png" width="170" alt="Offers">
+  <img src="docs/screenshots/mobile/09-account.png" width="170" alt="Account">
+  <img src="docs/screenshots/mobile/10-worker-home.png" width="170" alt="Worker home with earnings">
+  <img src="docs/screenshots/mobile/11-worker-find-jobs.png" width="170" alt="Worker: find jobs">
+</p>
+
 ---
 
 ## Contents
@@ -570,7 +587,7 @@ a race.
 cd backend    && npm test                # 154 tests across 16 files (npm run test:coverage: ~88% lines, 80% floor enforced)
 cd ai-service && pytest -q               # 30 tests — semantic matching, trust, pricing, coverage, monotonicity, fallbacks
 cd frontend   && npm test && npm run build   # 25 unit/component tests + bundling check
-cd flutter_app && flutter analyze && flutter test   # 18 tests
+cd flutter_app && flutter analyze && flutter test   # 22 tests
 
 bash scripts/smoke-test.sh <api> <web>   # post-deploy: headers, CORS, auth, /metrics lock-down
 k6 run -e API=<staging> loadtest/k6-api.js   # latency budgets as pass/fail thresholds
@@ -598,7 +615,7 @@ cd ai-service && python scripts/validate_models.py   # the promotion gate CI enf
 | Backend (Vitest + Supertest) | **154 / 154** passed, 16 files; coverage 87.6% lines, 83.6% statements, 82.9% functions, 66.7% branches |
 | AI service (pytest) | **30 / 30** passed |
 | Web (Vitest) + production build | **25 / 25** passed, build OK |
-| Mobile (`flutter analyze` + `flutter test`) | no analyzer issues, **18 / 18** passed |
+| Mobile (`flutter analyze` + `flutter test`) | no analyzer issues, **22 / 22** passed; also run on an Android emulator against the live API (sign-in, browse, negotiate, post a job, worker earnings) |
 | Live smoke test (API + web) | all checks passed with Redis connected |
 | End-to-end feature suite (`scripts/e2e.mjs`, real HTTP + Stripe test cards) | **64 / 64** passed |
 | Load test, 50 concurrent users (k6) | 11,591 requests, 0% errors, p95 34 ms, p99 108 ms |

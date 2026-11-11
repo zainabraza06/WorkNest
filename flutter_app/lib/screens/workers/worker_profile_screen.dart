@@ -88,7 +88,9 @@ class WorkerProfileScreen extends StatelessWidget {
                     const SizedBox(height: 16),
                     Wrap(spacing: 8, runSpacing: 8, children: [
                       for (final c in cats) Chip(avatar: Icon(categoryMap[c]?.icon ?? Icons.build_outlined, size: 16), label: Text(categoryMap[c]?.label ?? c)),
-                      for (final s in skills) Chip(label: Text(s)),
+                      // Same rule as the web profile: a skill that just repeats a category label adds nothing.
+                      for (final s in skills)
+                        if (!cats.any((c) => (categoryMap[c]?.label ?? c).toLowerCase() == s.toLowerCase())) Chip(label: Text(s)),
                     ]),
                     if (portfolio.isNotEmpty) ...[
                       const SizedBox(height: 20),
