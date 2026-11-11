@@ -1,5 +1,5 @@
 # WorkNest web app — build with Vite, serve the static bundle with nginx
-FROM node:20-slim AS build
+FROM node:25-slim AS build
 
 WORKDIR /app
 
