@@ -1,5 +1,5 @@
 # WorkNest API (Express + Socket.io)
-FROM node:20-slim
+FROM node:26-slim
 
 # Pull OS security patches released since the base image was built (CI's Trivy scan gates on these)
 RUN apt-get update && apt-get upgrade -y --no-install-recommends && rm -rf /var/lib/apt/lists/*
