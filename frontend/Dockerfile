@@ -23,7 +23,7 @@ RUN npm run build
 
 # nginx-unprivileged runs as a non-root user and listens on 8080, so a compromise of the web
 # tier does not start from root and the container needs no NET_BIND_SERVICE capability.
-FROM nginxinc/nginx-unprivileged:1.27-alpine
+FROM nginxinc/nginx-unprivileged:1.31-alpine
 
 # Patch OS packages (needs root; the image drops back to the unprivileged user right after)
 USER root
