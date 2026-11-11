@@ -1,5 +1,5 @@
 # Rendered by the nginx image's entrypoint (envsubst) at container start, so the same image
-# can be promoted between environments. Only ${API_ORIGIN} is substituted; nginx's own $vars
+# can be promoted between environments. Only ${API_ORIGIN} and ${API_WS_ORIGIN} are substituted; nginx's own $vars
 # (like $uri) are left alone because the entrypoint restricts substitution to defined env vars.
 server {
     listen 8080;
@@ -13,9 +13,9 @@ server {
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
     add_header Permissions-Policy "camera=(), microphone=(), geolocation=(self), payment=(self)" always;
     add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
-    # Report-Only first: watch the browser console for violations for a release or two,
-    # then rename to Content-Security-Policy to enforce. See docs/SECURITY.md.
-    add_header Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://res.cloudinary.com; connect-src 'self' ${API_ORIGIN} https://api.stripe.com; frame-src https://js.stripe.com https://hooks.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+    # Enforced. It ran Report-Only first; the checkout (Stripe Elements) and every page were driven
+    # in a real browser with zero violations before this was switched on. See docs/SECURITY.md.
+    add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://res.cloudinary.com; connect-src 'self' ${API_ORIGIN} ${API_WS_ORIGIN} https://api.stripe.com; frame-src https://js.stripe.com https://hooks.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
 
     # Hashed filenames never change contents, so cache them hard.
     # (add_header in a location block replaces the server-level ones, so repeat the essentials)
@@ -43,7 +43,7 @@ server {
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
         add_header Permissions-Policy "camera=(), microphone=(), geolocation=(self), payment=(self)" always;
         add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
-        add_header Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://res.cloudinary.com; connect-src 'self' ${API_ORIGIN} https://api.stripe.com; frame-src https://js.stripe.com https://hooks.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
+        add_header Content-Security-Policy "default-src 'self'; script-src 'self' https://js.stripe.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://res.cloudinary.com; connect-src 'self' ${API_ORIGIN} ${API_WS_ORIGIN} https://api.stripe.com; frame-src https://js.stripe.com https://hooks.stripe.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'" always;
     }
 
     gzip on;

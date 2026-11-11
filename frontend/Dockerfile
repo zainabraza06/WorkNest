@@ -32,7 +32,7 @@ USER 101
 
 # Templates in /etc/nginx/templates are rendered with envsubst at start-up. Limiting the
 # substituted variables keeps nginx's own $uri / $host from being eaten.
-ENV NGINX_ENVSUBST_FILTER=API_ORIGIN     API_ORIGIN=""
+ENV NGINX_ENVSUBST_FILTER=API_     API_ORIGIN=""     API_WS_ORIGIN=""
 
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html

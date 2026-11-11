@@ -81,6 +81,7 @@ services:
     environment:
       # Allowed in the Content-Security-Policy connect-src, resolved at container start
       API_ORIGIN: http://localhost:5000
+      API_WS_ORIGIN: ws://localhost:5000 # socket.io; a CSP http(s) source does not cover ws(s)
     # nginx-unprivileged renders its config from a template at start-up and keeps temp files
     # under /tmp; it needs those two paths writable on top of the read-only root filesystem.
     # The container runs as uid 101 (nginx-unprivileged). A tmpfs is root-owned by default, so

@@ -9,7 +9,7 @@
 | Authorization | role guards + ownership checks in controllers; booking contact/address revealed only after escrow payment |
 | Input | Zod schemas on every route; 1 MB JSON cap; upload type and size allow-lists; no raw operators reach Mongo |
 | Transport | HSTS; mobile uses HTTPS only; CORS limited to configured origins (verified by smoke test) |
-| Headers | API: CSP `default-src 'none'`, nosniff, no-referrer, `no-store`. Web: DENY framing, HSTS, Permissions-Policy, CSP (report-only) |
+| Headers | API: CSP `default-src 'none'`, nosniff, no-referrer, `no-store`. Web: DENY framing, HSTS, Permissions-Policy, **enforced CSP** (no inline or third-party script; only Stripe, Cloudinary, Google Fonts and the API are allowed) |
 | Secrets | env-only; redacted in logs; gitleaks in CI; mobile token in Keychain/Keystore (`flutter_secure_storage`); Stripe **test keys enforced** |
 | Supply chain | `npm audit` gate in CI, Dependabot security updates (a GitHub setting, off by default), Trivy image scan, non-root containers, read-only FS in compose |
 | Config safety | production boot refuses short `JWT_SECRET`, wildcard CORS, localhost DB; Render-hosted = production-mode even if `NODE_ENV` is forgotten |
@@ -17,9 +17,9 @@
 
 ## Known gaps (deliberate, ranked)
 
-1. **CSP is report-only** on the web. Browse the app with DevTools open, fix any violations,
-   then rename the header to `Content-Security-Policy` (`frontend/vercel.json`,
-   `frontend/nginx.conf.template`).
+1. ~~CSP is report-only~~ **Done: enforced.** Verified in a real browser: the full Stripe checkout runs with
+   zero violations, and an injected inline script, an external script and an exfiltration request are
+   all blocked.
 2. **Rate-limit store is in memory unless `REDIS_URL` is set.** Set it before running more than one instance.
 3. **Web stores the JWT in localStorage**, so an XSS would expose it. The CSP and React's
    escaping reduce the risk; httpOnly refresh cookies are the next step.
