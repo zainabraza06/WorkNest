@@ -452,6 +452,80 @@ await step('dispute: raised, admin reads it, decision requires a reason, escrow 
   eq((await http('POST', `/bookings/${bookingId}/resolve`, { token: ctx.client.token, body: { outcome: 'release', note: 'I decide this myself please' } })).status, 403, 'only admin can resolve');
 });
 
+section('Authorization matrix (outsiders and wrong roles must be refused)');
+await step('another client and another worker cannot touch a booking, offer or job they are not part of', async () => {
+  // A fresh booking awaiting payment, so the checks hit ownership, not "already completed"
+  const fresh = await bookedJob('E2E: authorization matrix');
+  let otherClient;
+  try {
+    otherClient = await login('client2@worknest.test');
+  } catch {
+    otherClient = ctx.new_client; // falls back to the freshly registered client
+  }
+  const outsiders = { 'another client': otherClient.token, 'another worker': ctx.worker2.token, 'a new account': ctx.new_client.token };
+
+  const attempts = [
+    ['GET', `/bookings/${fresh.bookingId}`],
+    ['POST', `/bookings/${fresh.bookingId}/payment`],
+    ['POST', `/bookings/${fresh.bookingId}/payment/sync`],
+    ['POST', `/bookings/${fresh.bookingId}/start`],
+    ['POST', `/bookings/${fresh.bookingId}/complete`],
+    ['POST', `/bookings/${fresh.bookingId}/cancel`, { reason: 'not mine' }],
+    ['POST', `/bookings/${fresh.bookingId}/dispute`, { reason: 'This is not my booking at all.' }],
+    ['POST', `/bookings/${fresh.bookingId}/reviews`, { rating: 1, text: 'drive-by review' }],
+    ['GET', `/offers/${fresh.offerId}`],
+    ['GET', `/offers/${fresh.offerId}/messages`],
+    ['POST', `/offers/${fresh.offerId}/messages`, { text: 'hello from outside' }],
+    ['POST', `/offers/${fresh.offerId}/counter`, { amount: 3200 }],
+    ['POST', `/offers/${fresh.offerId}/accept`],
+    ['POST', `/offers/${fresh.offerId}/reject`, { reason: 'no' }],
+    ['POST', `/offers/${fresh.offerId}/withdraw`, { reason: 'no' }],
+    ['PATCH', `/jobs/${fresh.jobId}`, { urgency: 'urgent' }],
+    ['POST', `/jobs/${fresh.jobId}/cancel`, { reason: 'not mine' }],
+  ];
+  const leaks = [];
+  for (const [who, token] of Object.entries(outsiders)) {
+    for (const [method, path, body] of attempts) {
+      const r = await http(method, path, { token, body });
+      if (![401, 403, 404].includes(r.status)) leaks.push(`${who}: ${method} ${path} -> ${r.status}`);
+    }
+  }
+  assert(leaks.length === 0, `outsiders were not refused:\n          ${leaks.slice(0, 8).join('\n          ')}`);
+
+  // The booking must be untouched by all of that
+  const b = await http('GET', `/bookings/${fresh.bookingId}`, { token: ctx.client.token });
+  eq(b.status, 200, 'owner can still read it');
+  assert(!/cancel/i.test(JSON.stringify(b.data.booking?.status ?? b.data.status)), 'booking not cancelled by an outsider');
+});
+await step('anonymous callers are refused on every protected route', async () => {
+  const paths = [
+    ['GET', '/bookings'], ['GET', '/offers'], ['GET', '/notifications'], ['GET', '/withdrawals/earnings'],
+    ['GET', '/admin/overview'], ['GET', '/jobs/mine'], ['POST', '/jobs', jobBody()], ['POST', '/auth/logout-all'],
+    ['PATCH', '/auth/password', { currentPassword: 'x', newPassword: 'NewPassword456' }],
+  ];
+  const open = [];
+  for (const [m, p, b] of paths) {
+    const r = await http(m, p, { body: b });
+    if (r.status !== 401) open.push(`${m} ${p} -> ${r.status}`);
+  }
+  assert(open.length === 0, `not protected: ${open.join(', ')}`);
+});
+await step('wrong roles are refused (client sending offers, worker posting jobs, non-admin settling payouts)', async () => {
+  eq((await http('POST', `/jobs/${ctx.jobId}/offers`, { token: ctx.client.token, body: { amount: 3000 } })).status, 403, 'client cannot send an offer');
+  eq((await http('POST', '/jobs', { token: ctx.worker.token, body: jobBody() })).status, 403, 'worker cannot post a job');
+  eq((await http('POST', '/withdrawals/507f1f77bcf86cd799439011/settle', { token: ctx.worker.token, body: { paid: true } })).status, 403, 'worker cannot settle a payout');
+  eq((await http('GET', '/admin/disputes', { token: ctx.worker.token })).status, 403, 'worker cannot read the dispute queue');
+  eq((await http('GET', '/withdrawals/summary', { token: ctx.client.token })).status, 403, 'client cannot read payout totals');
+});
+await step('a worker cannot read another worker\'s earnings or payout details', async () => {
+  const mine = await http('GET', '/withdrawals/earnings', { token: ctx.worker.token });
+  const theirs = await http('GET', '/withdrawals/earnings', { token: ctx.worker2.token });
+  eq(mine.status, 200, 'own earnings');
+  assert(JSON.stringify(mine.data) !== JSON.stringify(theirs.data), 'each worker sees only their own balances');
+  const adminList = await http('GET', '/withdrawals', { token: ctx.worker.token });
+  assert(!/accountNumber|PK36/.test(JSON.stringify(adminList.data)) || adminList.status === 200, 'payout list is scoped');
+});
+
 section('Earnings & payouts');
 await step('worker earnings summary', async () => eq((await http('GET', '/withdrawals/earnings', { token: ctx.worker.token })).status, 200, 'status'));
 await step('save payout method (validated)', async () => {

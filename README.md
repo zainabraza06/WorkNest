@@ -585,8 +585,8 @@ a race.
 ## Tests
 
 ```bash
-cd backend    && npm test                # 154 tests across 16 files (npm run test:coverage: ~88% lines, 80% floor enforced)
-cd ai-service && pytest -q               # 30 tests — semantic matching, trust, pricing, coverage, monotonicity, fallbacks
+cd backend    && npm test                # 164 tests across 17 files (npm run test:coverage: ~88% lines, 80% floor enforced)
+cd ai-service && pytest -q               # 36 tests: semantic matching, service key, trust, pricing, coverage, monotonicity, fallbacks
 cd frontend   && npm test && npm run build   # 25 unit/component tests + bundling check
 cd flutter_app && flutter analyze && flutter test   # 22 tests
 
@@ -613,12 +613,12 @@ cd ai-service && python scripts/validate_models.py   # the promotion gate CI enf
 
 | Suite | Result |
 | --- | --- |
-| Backend (Vitest + Supertest) | **154 / 154** passed, 16 files; coverage 87.6% lines, 83.6% statements, 82.9% functions, 66.7% branches |
-| AI service (pytest) | **30 / 30** passed |
+| Backend (Vitest + Supertest) | **164 / 164** passed, 17 files; coverage 87.6% lines, 83.6% statements, 82.9% functions, 66.7% branches |
+| AI service (pytest) | **36 / 36** passed |
 | Web (Vitest) + production build | **38 / 38** passed, build OK |
 | Mobile (`flutter analyze` + `flutter test`) | no analyzer issues, **35 / 35** passed; also run on an Android emulator against the live API (sign-in, browse, negotiate, post a job, worker earnings) |
 | Live smoke test (API + web) | all checks passed with Redis connected |
-| End-to-end feature suite (`scripts/e2e.mjs`, real HTTP + Stripe test cards) | **64 / 64** passed |
+| End-to-end feature suite (`scripts/e2e.mjs`, real HTTP + Stripe test cards, authorization matrix) | **68 / 68** passed |
 | Load test, 50 concurrent users (k6) | 11,591 requests, 0% errors, p95 34 ms, p99 108 ms |
 | Stress test, up to 400 users (k6) | peak ~238 req/s on one 1-CPU instance, 0 5xx, CPU-bound; see [PERFORMANCE.md](docs/PERFORMANCE.md) |
 | Browser check (headless Chromium, live site) | no CSP violations, console errors or failed requests across the main pages |

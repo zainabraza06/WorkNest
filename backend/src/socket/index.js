@@ -69,5 +69,8 @@ export function initSocket(httpServer) {
 }
 
 // No-ops when sockets aren't initialised (tests, scripts)
+/** Drops every live socket of a user, on every API instance (used when their sessions are revoked). */
+export const disconnectUserSockets = (userId) => io?.in(`user:${userId}`).disconnectSockets(true);
+
 export const emitToUser = (userId, event, payload) => io?.to(`user:${userId}`).emit(event, payload);
 export const emitToOffer = (offerId, event, payload) => io?.to(`offer:${offerId}`).emit(event, payload);

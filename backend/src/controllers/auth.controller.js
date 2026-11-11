@@ -1,7 +1,16 @@
+import bcrypt from 'bcryptjs';
+
 import { ClientProfile, User, WorkerProfile } from '../models/index.js';
 import { ROLES } from '../constants/index.js';
 import { ApiError } from '../utils/ApiError.js';
 import { signToken } from '../utils/jwt.js';
+import { disconnectUserSockets } from '../socket/index.js';
+
+// A real bcrypt hash to compare against when the email is unknown, so "no such account" costs the
+// same ~100 ms as "wrong password". Without it the response time reveals which emails are registered,
+// however identical the error message is. Computed once, on first use.
+let dummyHash;
+const getDummyHash = () => (dummyHash ??= bcrypt.hash('timing-equaliser-not-a-real-password', 12));
 
 async function findProfile(user) {
   if (user.role === ROLES.WORKER) return WorkerProfile.findOne({ user: user._id });
@@ -29,7 +38,8 @@ export async function login(req, res) {
 
   const user = await User.findOne({ email }).select('+password');
   // Same message for unknown email and wrong password — don't leak which accounts exist
-  if (!user || !(await user.comparePassword(password))) {
+  const passwordOk = user ? await user.comparePassword(password) : await bcrypt.compare(password, await getDummyHash());
+  if (!user || !passwordOk) {
     throw ApiError.unauthorized('Incorrect email or password');
   }
   if (!user.isActive) throw ApiError.forbidden('This account has been disabled');
@@ -60,6 +70,7 @@ export async function changePassword(req, res) {
   user.password = newPassword;
   user.tokenVersion += 1; // a changed password must kill every session an attacker may hold
   await user.save();
+  disconnectUserSockets(user._id.toString()); // ...including live sockets; the client reconnects with its new token
 
   res.json({ success: true, data: { token: signToken(user) } });
 }
@@ -67,5 +78,6 @@ export async function changePassword(req, res) {
 /** "Sign out everywhere": invalidates every token issued so far, on every device. */
 export async function logoutAll(req, res) {
   await User.updateOne({ _id: req.user._id }, { $inc: { tokenVersion: 1 } });
+  disconnectUserSockets(req.user._id.toString());
   res.json({ success: true, data: { loggedOut: true } });
 }

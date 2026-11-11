@@ -79,3 +79,19 @@ deliberate retraining for price and trust**. Nothing retrains itself.
 4. **Re-run the checks that gate a model**: `python scripts/validate_models.py` (also enforced in CI).
 5. **Say so in the product.** The fair-price guide is guidance from a model trained on assumptions;
    until it is retrained on real bookings it should not be presented as market data.
+
+## Secure the AI service (one-time, 2 minutes)
+
+The AI service only checks a key when one is configured, and in production none is set, so its
+endpoints answer anyone who knows the URL. Generate one random value (for example
+`openssl rand -hex 32`, or any random string of 32+ characters) and set it in
+Render in **both** places, then let both services redeploy:
+
+| Service | Variable |
+| --- | --- |
+| `worknest-ai` | `SERVICE_API_KEY` |
+| `worknest-api` | `AI_SERVICE_KEY` |
+
+Check it: `curl -X POST https://worknest-ai.onrender.com/price/suggest -H 'content-type: application/json'
+-d '{"category":"plumbing","city":"Lahore","duration_type":"one_day","duration_count":1}'` should now return **401**, while the app's search and
+fair-price guide keep working. `/health` stays public for platform health checks.

@@ -246,7 +246,7 @@ otherwise that category silently falls back to the heuristic. The test
 
 ```bash
 pip install -r requirements-dev.txt
-pytest -q          # 30 tests
+pytest -q          # 36 tests
 ```
 
 They assert behaviour — ordering, bounds, full vocabulary coverage, the monotonicity

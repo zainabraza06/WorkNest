@@ -9,6 +9,8 @@ transparent heuristic. Every model falls back to a documented heuristic when its
 missing, so the contract holds either way — /health reports which path is live.
 """
 
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -21,6 +23,13 @@ from app.services import trust as trust_service
 from app.services.model_registry import backend_name, price_meta, price_model, trust_meta, trust_model, versions
 
 settings = get_settings()
+
+logger = logging.getLogger("worknest-ai")
+if settings.app_env == "production" and not settings.service_api_key:
+    # Not fatal (a missing key must not take the service down mid-deploy), but it is a hole: without
+    # a key anyone on the internet can call the models. Set SERVICE_API_KEY here and AI_SERVICE_KEY
+    # on the API to the same value.
+    logger.warning("SERVICE_API_KEY is not set: the AI endpoints are open to anyone who knows the URL")
 
 app = FastAPI(
     title="WorkNest AI Service",

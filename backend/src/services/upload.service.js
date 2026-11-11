@@ -20,7 +20,8 @@ export function uploadBuffer(buffer, { folder, private: isPrivate = false, trans
     const stream = cloudinary.uploader.upload_stream(
       {
         folder: `worknest/${folder}`,
-        resource_type: 'auto',
+        // Public uploads are images only; "auto" is reserved for private ID documents, which may be PDFs
+        resource_type: isPrivate ? 'auto' : 'image',
         // ID documents are stored as "authenticated" assets: URLs need a signature to view
         type: isPrivate ? 'authenticated' : 'upload',
         transformation,

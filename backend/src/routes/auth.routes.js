@@ -38,6 +38,6 @@ router.post('/register', credentialLimiter, validate({ body: registerSchema }), 
 router.post('/login', credentialLimiter, accountLimiter, validate({ body: loginSchema }), auth.login);
 router.get('/me', requireAuth, auth.me);
 router.post('/logout-all', requireAuth, auth.logoutAll);
-router.patch('/password', requireAuth, validate({ body: changePasswordSchema }), auth.changePassword);
+router.patch('/password', credentialLimiter, requireAuth, validate({ body: changePasswordSchema }), auth.changePassword);
 
 export default router;
