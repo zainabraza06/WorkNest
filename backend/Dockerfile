@@ -12,6 +12,10 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
+# The runtime only needs `node`. npm (and its bundled dependencies, which the base image pins at
+# whatever version it shipped with) is dead weight and a scanner finding with no benefit.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx /opt/yarn* /usr/local/bin/yarn*
+
 COPY src ./src
 
 # Don't run the API as root
