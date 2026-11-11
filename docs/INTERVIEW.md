@@ -127,25 +127,32 @@ A **modular monolith** plus one separate service, on purpose. See `docs/ARCHITEC
 - **How would you evaluate it for real?** Log ranking events (impressions, clicks, hires),
   hold out a test set, measure hire rate at top-k and compare against the keyword baseline.
 
-## 7. Numbers (fill from your own runs, do not invent)
+## 7. Numbers (all measured; method and caveats in `docs/PERFORMANCE.md`)
 
 | Metric | Value | Source |
 | --- | --- | --- |
 | Backend tests | 154 passing, ~88% line coverage | `npm run test:coverage` |
-| AI tests / web tests / mobile tests | 30 / 25 / 18 | pytest / vitest / flutter test |
-| Event volume estimate | a few events per second at 10k daily users | capacity maths, not measured |
-| Load test p95 / error rate / saturation point | _fill from `loadtest/k6-api.js` run_ | k6 |
-| End-to-end feature checks | _fill from `scripts/e2e.mjs`_ | e2e |
+| AI / web / mobile tests | 30 / 25 / 18 passing | pytest / vitest / flutter test |
+| End-to-end feature checks | **64 of 64** over real HTTP, including real Stripe test-mode escrow, disputes, payouts, Socket.io | `scripts/e2e.mjs` |
+| Load test (50 concurrent users, 3 min hold) | 11,591 requests, **0% errors**, p95 **34 ms**, p99 **108 ms** | k6 `PROFILE=load` |
+| Stress test (to 400 users) | peak **~238 req/s** on one 1-CPU / 512 MB instance; **0 5xx**; p95 1.13 s, p99 1.89 s | k6 `PROFILE=stress` |
+| Saturation point and bottleneck | budgets held to ~120 to 150 req/s; then **CPU-bound** (~95% of 1 CPU), event-loop lag ~470 ms p99, memory flat at ~100 MB | Prometheus / Grafana, `docker stats` |
+| Capacity | ~8 to 10x the peak load of a 10k-daily-user product on one instance | arithmetic from the above |
+
+Be ready for: "this ran on a laptop against a local MongoDB". Answer: yes, so treat the numbers
+as indicative. They show the *shape* (CPU-bound, graceful degradation, no leak), and Atlas
+latency would raise p95 on database-bound routes.
 
 Capacity reasoning you can say out loud: 10,000 daily users with ~30 requests each is ~300k
-requests a day, about 3.5 req/s average and ~15 req/s at peak, against a single instance that
-holds well above that. State it as an estimate.
+requests a day, about 3.5 req/s average and ~15 req/s at peak. One instance held its latency
+budget to roughly 120 to 150 req/s, so there is about 8 to 10 times headroom before adding a
+second instance.
 
 ## 8. Weak spots, and how to own them
 
 | They find | You say |
 | --- | --- |
-| "No real users" | "Right. I load-tested with k6, injected failures, and I know the saturation point and its bottleneck." |
+| "No real users" | "Right. I load-tested with k6 to 400 concurrent users: it is CPU-bound at about 240 req/s on one 1-CPU instance, degrades without 5xx, and here is the Grafana run." |
 | "AI is trained on fake data" | "Yes, so I built fallbacks and a gate, and the evaluation plan is in this document. I make no accuracy claim." |
 | "Free tier, cold starts" | "Known; the blueprint targets a paid plan in Singapore. Cold start is the largest latency today." |
 | "JWT in localStorage" | "Documented gap; httpOnly refresh cookies are next." |

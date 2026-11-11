@@ -25,6 +25,7 @@ AI service [worknest-ai.onrender.com](https://worknest-ai.onrender.com/health)
 - [Monitoring: metrics, alerts, logs](docs/MONITORING.md)
 - [Runbook: deploy, rollback, incidents, backups](docs/RUNBOOK.md)
 - [Security controls and known gaps](docs/SECURITY.md)
+- [Performance and scale testing: measured load, stress and end-to-end results](docs/PERFORMANCE.md)
 - [Interview guide: pitch, design decisions, trade-offs, Q&A](docs/INTERVIEW.md)
 - `scripts/smoke-test.sh` (post-deploy checks), `loadtest/k6-api.js` (latency budgets)
 
@@ -64,6 +65,8 @@ Captured from the live deployment.
 | **Worker: browse jobs** | **Worker earnings and payouts** |
 | ![Admin console](docs/screenshots/11-admin-console.png) | ![AI service OpenAPI](docs/screenshots/12-ai-service-openapi.png) |
 | **Admin console** | **AI service** (FastAPI OpenAPI docs) |
+| ![Grafana dashboard under load](docs/screenshots/13-grafana-dashboard.png) | ![Prometheus alert rules](docs/screenshots/14-prometheus-alerts.png) |
+| **Grafana** during a 400-user stress run | **Prometheus** alert rules |
 
 ---
 
@@ -597,6 +600,9 @@ cd ai-service && python scripts/validate_models.py   # the promotion gate CI enf
 | Web (Vitest) + production build | **25 / 25** passed, build OK |
 | Mobile (`flutter analyze` + `flutter test`) | no analyzer issues, **18 / 18** passed |
 | Live smoke test (API + web) | all checks passed with Redis connected |
+| End-to-end feature suite (`scripts/e2e.mjs`, real HTTP + Stripe test cards) | **64 / 64** passed |
+| Load test, 50 concurrent users (k6) | 11,591 requests, 0% errors, p95 34 ms, p99 108 ms |
+| Stress test, up to 400 users (k6) | peak ~238 req/s on one 1-CPU instance, 0 5xx, CPU-bound; see [PERFORMANCE.md](docs/PERFORMANCE.md) |
 | Browser check (headless Chromium, live site) | no CSP violations, console errors or failed requests across the main pages |
 
 Backend tests run against an in-memory MongoDB (`mongodb-memory-server`, downloaded on first run)
