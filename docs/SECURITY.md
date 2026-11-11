@@ -1,0 +1,34 @@
+# Security
+
+## Controls in place
+
+| Area | Control |
+| --- | --- |
+| Authentication | bcrypt (cost 12); JWT with `tokenVersion` revocation; password change and *Sign out everywhere* kill all sessions; same checks on REST and Socket.io |
+| Brute force | per-IP limiter (20 / 15 min on credentials), per-account limiter (10 failures / 15 min across all IPs), global 500 / 15 min |
+| Authorization | role guards + ownership checks in controllers; booking contact/address revealed only after escrow payment |
+| Input | Zod schemas on every route; 1 MB JSON cap; upload type and size allow-lists; no raw operators reach Mongo |
+| Transport | HSTS; mobile uses HTTPS only; CORS limited to configured origins (verified by smoke test) |
+| Headers | API: CSP `default-src 'none'`, nosniff, no-referrer, `no-store`. Web: DENY framing, HSTS, Permissions-Policy, CSP (report-only) |
+| Secrets | env-only; redacted in logs; gitleaks in CI; mobile token in Keychain/Keystore (`flutter_secure_storage`); Stripe **test keys enforced** |
+| Supply chain | `npm audit` gate in CI, Dependabot weekly, Trivy image scan, non-root containers, read-only FS in compose |
+| Config safety | production boot refuses short `JWT_SECRET`, wildcard CORS, localhost DB; Render-hosted = production-mode even if `NODE_ENV` is forgotten |
+| Privacy | ID documents are signed private assets; Sentry runs with `sendDefaultPii: false` |
+
+## Known gaps (deliberate, ranked)
+
+1. **CSP is report-only** on the web. Browse the app with DevTools open, fix any violations,
+   then rename the header to `Content-Security-Policy` (`frontend/vercel.json`,
+   `frontend/nginx.conf.template`).
+2. **Rate-limit store is in memory** — per instance. Fine for one instance; use Redis before
+   scaling out.
+3. **Web stores the JWT in localStorage**, so an XSS would expose it. The CSP and React's
+   escaping reduce the risk; httpOnly refresh cookies are the next step.
+4. **No certificate pinning** in the mobile app (reasonable trade-off vs. rotation risk).
+5. **Registration reveals whether an email exists** (409). Standard trade-off for UX.
+6. Stripe is test-mode only.
+
+## Reporting a vulnerability
+
+Email the repository owner privately; please don't open a public issue. Include steps to
+reproduce and the `X-Request-Id` of a failing request if you have one.

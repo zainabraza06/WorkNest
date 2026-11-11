@@ -1,0 +1,25 @@
+name: Production smoke test
+
+# Deeper than keep-warm: verifies security headers, CORS, auth behaviour and that /metrics is
+# not public. Runs daily, on demand, and after a successful CI run on main.
+
+on:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  smoke:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # Give Render/Vercel a few minutes to finish deploying the commit that just passed CI
+      - name: Wait for deploy
+        if: github.event_name == 'workflow_run'
+        run: sleep 240
+      - run: bash scripts/smoke-test.sh "${{ vars.API_URL || 'https://worknest-qicp.onrender.com' }}" "${{ vars.WEB_URL || 'https://work-nest-z.vercel.app' }}"

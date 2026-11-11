@@ -15,6 +15,18 @@ AI service [worknest-ai.onrender.com](https://worknest-ai.onrender.com/health)
 
 ---
 
+## Mobile app and production docs
+
+- **Mobile** (`flutter_app/`): Flutter client for clients and workers on the same API as the web
+  app: jobs, negotiation chat, bookings, earnings, notifications. Run it with
+  `flutter run --dart-define=API_URL=http://10.0.2.2:5000` (Android emulator to local API);
+  release builds sign from `android/key.properties` (see `docs/RUNBOOK.md`).
+- [Architecture and scaling plan](docs/ARCHITECTURE.md)
+- [Monitoring: metrics, alerts, logs](docs/MONITORING.md)
+- [Runbook: deploy, rollback, incidents, backups](docs/RUNBOOK.md)
+- [Security controls and known gaps](docs/SECURITY.md)
+- `scripts/smoke-test.sh` (post-deploy checks), `loadtest/k6-api.js` (latency budgets)
+
 ## Contents
 
 - [Architecture](#architecture)
