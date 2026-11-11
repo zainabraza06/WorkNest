@@ -13,6 +13,9 @@ services:
     image: redis:7-alpine
     # Redis holds only counters and pub/sub; losing it loses nothing that matters, so no persistence
     command: ['redis-server', '--maxmemory', '128mb', '--maxmemory-policy', 'allkeys-lru', '--appendonly', 'no', '--save', '']
+    # Start as the unprivileged redis user (uid 999). The image's entrypoint otherwise starts as
+    # root and drops privileges itself, which `cap_drop: ALL` forbids (setpriv: Operation not permitted).
+    user: '999:999'
     read_only: true
     cap_drop: [ALL]
     security_opt: ['no-new-privileges:true']

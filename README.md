@@ -25,6 +25,7 @@ AI service [worknest-ai.onrender.com](https://worknest-ai.onrender.com/health)
 - [Monitoring: metrics, alerts, logs](docs/MONITORING.md)
 - [Runbook: deploy, rollback, incidents, backups](docs/RUNBOOK.md)
 - [Security controls and known gaps](docs/SECURITY.md)
+- [Interview guide: pitch, design decisions, trade-offs, Q&A](docs/INTERVIEW.md)
 - `scripts/smoke-test.sh` (post-deploy checks), `loadtest/k6-api.js` (latency budgets)
 
 ## Tech stack

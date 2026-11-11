@@ -63,6 +63,12 @@ const CATEGORIES = ['plumbing', 'electrical', 'carpentry', 'painting', 'cleaning
 const CITIES = ['Karachi', 'Lahore', 'Islamabad'];
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 
+// One load generator is one IP, so the per-IP limiter would throttle it long before the API is
+// stressed. With -e CLIENT_IPS=1 each virtual user presents its own address via X-Forwarded-For,
+// which models many real clients. It only works when the API trusts one proxy hop
+// (TRUST_PROXY_HOPS=1, as on Render); against an API that does not, the header is ignored.
+const clientHeaders = () => (__ENV.CLIENT_IPS ? { 'X-Forwarded-For': `10.${Math.floor(__VU / 250) % 250}.${__VU % 250}.7` } : {});
+
 export function setup() {
   const res = http.get(`${API}/api/health/ready`);
   if (res.status !== 200) throw new Error(`API not ready at ${API}: ${res.status} ${res.body}`);
@@ -70,11 +76,11 @@ export function setup() {
 
 export default function () {
   group('browse (anonymous)', () => {
-    let res = http.get(`${API}/api/jobs?limit=12&category=${pick(CATEGORIES)}`, { tags: { endpoint: 'jobs_list' } });
+    let res = http.get(`${API}/api/jobs?limit=12&category=${pick(CATEGORIES)}`, { headers: clientHeaders(), tags: { endpoint: 'jobs_list' } });
     check(res, { 'jobs 200': (r) => r.status === 200, 'jobs has items': (r) => r.json('data.items') !== undefined });
     rateLimited.add(res.status === 429);
 
-    res = http.get(`${API}/api/workers?limit=10&category=${pick(CATEGORIES)}&city=${pick(CITIES)}`, { tags: { endpoint: 'workers_search' } });
+    res = http.get(`${API}/api/workers?limit=10&category=${pick(CATEGORIES)}&city=${pick(CITIES)}`, { headers: clientHeaders(), tags: { endpoint: 'workers_search' } });
     check(res, { 'workers 200': (r) => r.status === 200 });
     searchLatency.add(res.timings.duration);
     rateLimited.add(res.status === 429);
@@ -83,7 +89,7 @@ export default function () {
   sleep(1 + Math.random() * 2); // think time: real users read before they click
 
   // Lightweight, unauthenticated, must never be throttled or slow
-  const health = http.get(`${API}/api/health/live`, { tags: { endpoint: 'health' } });
+  const health = http.get(`${API}/api/health/live`, { headers: clientHeaders(), tags: { endpoint: 'health' } });
   check(health, { 'health 200': (r) => r.status === 200 });
 
   // A failed login exercises the credential limiter + bcrypt without needing real accounts
@@ -92,7 +98,7 @@ export default function () {
       `${API}/api/auth/login`,
       JSON.stringify({ email: `loadtest-${__VU}@example.com`, password: 'not-a-real-password' }),
       {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...clientHeaders() },
         tags: { endpoint: 'login' },
         // A refused login is the correct outcome here, not a failed request
         responseCallback: http.expectedStatuses(401, 429),
