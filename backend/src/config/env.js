@@ -38,6 +38,8 @@ const schema = z.object({
   SENTRY_TRACES_SAMPLE_RATE: z.coerce.number().min(0).max(1).default(0.05),
   // Bearer token for GET /metrics. In production the endpoint stays disabled without one.
   METRICS_TOKEN: z.string().min(16).optional().or(z.literal('').transform(() => undefined)),
+  // redis:// or rediss:// (TLS). Optional: unset = single-instance in-memory behaviour.
+  REDIS_URL: z.string().regex(/^rediss?:\/\//, 'must start with redis:// or rediss://').optional().or(z.literal('').transform(() => undefined)),
   DB_MAX_POOL_SIZE: z.coerce.number().int().min(1).max(200).default(20),
   SHUTDOWN_TIMEOUT_MS: z.coerce.number().int().positive().default(15_000),
   // How many reverse proxies sit in front of the API (Render/Heroku = 1). Wrong values let

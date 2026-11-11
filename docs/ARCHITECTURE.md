@@ -47,9 +47,8 @@ the CDN are immutable and cached for a year).
    `render.yaml` targets a paid plan in Singapore (closest region to Pakistan).
 2. **Atlas tier + indexes.** Watch slow queries in Atlas Performance Advisor; add indexes it
    suggests. Move reads to secondaries only after profiling.
-3. **Horizontal API scale.** Needs two things first: a shared rate-limit store (Redis; the
-   in-memory one is per-instance) and the Socket.io Redis adapter, so rooms span instances.
-   Everything else is already stateless (JWT, no server sessions, uploads go straight to
+3. **Horizontal API scale.** Set `REDIS_URL`: rate-limit counters and Socket.io rooms (Redis
+   adapter) then span every instance, and a Redis outage fails open. Everything else is already stateless (JWT, no server sessions, uploads go straight to
    Cloudinary).
 4. **Async work.** Ranking/trust refresh and notifications run inline; move to a queue
    (BullMQ) when p95 on write endpoints exceeds budget.
@@ -68,7 +67,8 @@ account review, and legal terms for escrow — it is intentionally not a config 
 
 ## Roadmap (not done, ranked by risk reduction)
 
-- Redis for rate limits + Socket.io adapter (prerequisite for >1 API instance)
+- Provision managed Redis in production and set `REDIS_URL` (code is ready; see compose overlay)
+- Queue (BullMQ on the same Redis) if write-path p95 exceeds budget. Kafka only at event-streaming scale
 - Atlas backup restore drill (see RUNBOOK) and PITR
 - FCM push for mobile; Sentry DSN on web and mobile (hooks exist)
 - Enforce the CSP after a report-only period

@@ -1,7 +1,9 @@
+import { createAdapter } from '@socket.io/redis-adapter';
 import { Server } from 'socket.io';
 import mongoose from 'mongoose';
 
 import { env } from '../config/env.js';
+import { getRedis } from '../config/redis.js';
 import { Offer } from '../models/index.js';
 import { resolveUser } from '../middleware/auth.js';
 import { socketConnections } from '../observability/metrics.js';
@@ -20,6 +22,11 @@ export function initSocket(httpServer) {
   io = new Server(httpServer, {
     cors: { origin: env.clientOrigins, credentials: true },
   });
+
+  // With Redis, rooms and broadcasts span every API instance, so a message sent through
+  // instance A reaches a socket connected to instance B. Without it, single-instance only.
+  const redis = getRedis();
+  if (redis) io.adapter(createAdapter(redis, redis.duplicate()));
 
   io.use(async (socket, next) => {
     try {

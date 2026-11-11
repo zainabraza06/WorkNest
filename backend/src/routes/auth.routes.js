@@ -1,5 +1,7 @@
 import { Router } from 'express';
-import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
+import { ipKeyGenerator } from 'express-rate-limit';
+
+import { createLimiter } from '../middleware/rateLimit.js';
 
 import * as auth from '../controllers/auth.controller.js';
 import { requireAuth } from '../middleware/auth.js';
@@ -10,22 +12,20 @@ import { env } from '../config/env.js';
 const router = Router();
 
 // Stricter limiter on credential endpoints to slow brute-force attempts
-const credentialLimiter = rateLimit({
+const credentialLimiter = createLimiter({
+  name: 'credentials',
   windowMs: 15 * 60 * 1000,
   limit: env.isTest ? 10_000 : 20,
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
   message: { success: false, message: 'Too many attempts, please try again later' },
 });
 
 // Per-ACCOUNT limiter. The per-IP limiter above stops one machine guessing many passwords;
 // this stops many machines (a botnet, rotating proxies) guessing one account's password.
 // Successful logins do not count, so a legitimate user is never locked out by their own use.
-const accountLimiter = rateLimit({
+const accountLimiter = createLimiter({
+  name: 'account',
   windowMs: 15 * 60 * 1000,
   limit: env.isTest ? 10_000 : 10,
-  standardHeaders: 'draft-7',
-  legacyHeaders: false,
   skipSuccessfulRequests: true,
   keyGenerator: (req) => {
     const email = typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : '';

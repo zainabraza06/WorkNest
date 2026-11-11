@@ -1,0 +1,48 @@
+groups:
+  - name: worknest-api
+    rules:
+      - alert: ApiDown
+        expr: up{job="worknest-api"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations: { summary: "API is not being scraped / is down" }
+
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(http_request_duration_seconds_count{status_class="5xx"}[5m]))
+            / sum(rate(http_request_duration_seconds_count[5m])) > 0.02
+        for: 5m
+        labels: { severity: critical }
+        annotations: { summary: "More than 2% of requests are failing with 5xx" }
+
+      - alert: HighLatencyP95
+        expr: histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket[5m]))) > 0.8
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "p95 latency above the 800 ms budget" }
+
+      - alert: AiServiceDegraded
+        expr: |
+          sum(rate(ai_service_calls_total{outcome=~"error|skipped"}[10m]))
+            / sum(rate(ai_service_calls_total[10m])) > 0.5
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "Over half of AI calls are failing or short-circuited; search is in keyword fallback" }
+
+      - alert: EventLoopLag
+        expr: nodejs_eventloop_lag_p99_seconds > 0.2
+        for: 5m
+        labels: { severity: warning }
+        annotations: { summary: "Node event loop p99 lag above 200 ms (CPU-bound work or overload)" }
+
+      - alert: HighMemory
+        expr: process_resident_memory_bytes{job="worknest-api"} > 450 * 1024 * 1024
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "API RSS above 450 MB (compose limit is 512 MB)" }
+
+      - alert: AuthBruteForce
+        expr: sum(rate(http_request_duration_seconds_count{route=~".*/auth/login",status_class="4xx"}[5m])) > 2
+        for: 5m
+        labels: { severity: warning }
+        annotations: { summary: "Sustained failed-login rate: possible credential stuffing" }

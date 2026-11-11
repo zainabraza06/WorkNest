@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import mongoose from 'mongoose';
 
+import { redisStatus } from '../config/redis.js';
 import { isShuttingDown } from '../lifecycle.js';
 
 import adminRoutes from './admin.routes.js';
@@ -44,6 +45,8 @@ router.get('/health/ready', async (_req, res) => {
     success: ready,
     status: ready ? 'ready' : draining ? 'draining' : 'unavailable',
     db: db ? 'connected' : 'disconnected',
+    // Reported, but deliberately not part of readiness: Redis is an accelerator, not a dependency
+    redis: redisStatus(),
   });
 });
 

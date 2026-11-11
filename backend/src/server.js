@@ -2,6 +2,7 @@ import http from 'node:http';
 
 import { connectDB, disconnectDB } from './config/db.js';
 import { env } from './config/env.js';
+import { closeRedis } from './config/redis.js';
 import { createApp } from './app.js';
 import { beginShutdown } from './lifecycle.js';
 import { logger } from './observability/logger.js';
@@ -53,6 +54,7 @@ async function start() {
       await new Promise((resolve) => io.close(resolve));
       await new Promise((resolve) => server.close(resolve));
       await disconnectDB();
+      await closeRedis();
       await flushSentry();
       logger.info('shutdown complete');
       process.exit(0);

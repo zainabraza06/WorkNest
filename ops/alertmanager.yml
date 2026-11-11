@@ -1,0 +1,10 @@
+# Route alerts somewhere a human will see them. Add a Slack/email/PagerDuty receiver config.
+route:
+  receiver: default
+  group_by: [alertname]
+  group_wait: 30s
+  repeat_interval: 4h
+receivers:
+  - name: default
+    # webhook_configs:
+    #   - url: https://hooks.slack.com/services/XXX

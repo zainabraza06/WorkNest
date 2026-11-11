@@ -1,0 +1,69 @@
+# Metrics, dashboards and alerting, layered on the main stack:
+#
+#   docker compose -f docker-compose.yml -f docker-compose.observability.yml up --build
+#
+#   Prometheus http://localhost:9090   Grafana http://localhost:3000 (admin / $GRAFANA_PASSWORD)
+#
+# Also adds Redis and points the API at it, so rate limits and Socket.io rooms are shared.
+# Requires METRICS_TOKEN in backend/.env and the same value in ops/metrics_token (gitignored):
+#   printf '%s' "$METRICS_TOKEN" > ops/metrics_token
+
+services:
+  redis:
+    image: redis:7-alpine
+    # Redis holds only counters and pub/sub; losing it loses nothing that matters, so no persistence
+    command: ['redis-server', '--maxmemory', '128mb', '--maxmemory-policy', 'allkeys-lru', '--appendonly', 'no', '--save', '']
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    environment:
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    volumes:
+      - ./ops/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./ops/alerts.yml:/etc/prometheus/alerts.yml:ro
+      - ./ops/metrics_token:/etc/prometheus/metrics_token:ro
+      - prometheus-data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=15d
+    ports: ['127.0.0.1:9090:9090']
+    restart: unless-stopped
+
+  alertmanager:
+    image: prom/alertmanager:v0.27.0
+    volumes:
+      - ./ops/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+    ports: ['127.0.0.1:9093:9093']
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?set GRAFANA_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+      GF_AUTH_ANONYMOUS_ENABLED: 'false'
+    volumes:
+      - ./ops/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./ops/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports: ['127.0.0.1:3000:3000']
+    depends_on: [prometheus]
+    restart: unless-stopped
+
+volumes:
+  prometheus-data:
+  grafana-data:

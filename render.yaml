@@ -54,6 +54,8 @@ services:
         sync: false
       - key: SENTRY_DSN
         sync: false
+      - key: REDIS_URL
+        sync: false # Render Key Value / Upstash: rediss://… ; unset = single-instance in-memory
 
   - type: web
     name: worknest-ai

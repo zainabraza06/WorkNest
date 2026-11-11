@@ -20,8 +20,7 @@
 1. **CSP is report-only** on the web. Browse the app with DevTools open, fix any violations,
    then rename the header to `Content-Security-Policy` (`frontend/vercel.json`,
    `frontend/nginx.conf.template`).
-2. **Rate-limit store is in memory** — per instance. Fine for one instance; use Redis before
-   scaling out.
+2. **Rate-limit store is in memory unless `REDIS_URL` is set.** Set it before running more than one instance.
 3. **Web stores the JWT in localStorage**, so an XSS would expose it. The CSP and React's
    escaping reduce the risk; httpOnly refresh cookies are the next step.
 4. **No certificate pinning** in the mobile app (reasonable trade-off vs. rotation risk).

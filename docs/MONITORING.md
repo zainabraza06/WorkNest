@@ -36,6 +36,17 @@ sum(rate(ai_service_calls_total{outcome=~"error|skipped"}[10m]))
 nodejs_eventloop_lag_p99_seconds > 0.2
 ```
 
+## Local Prometheus + Grafana
+
+```bash
+printf '%s' "$METRICS_TOKEN" > ops/metrics_token
+GRAFANA_PASSWORD=change-me docker compose -f docker-compose.yml -f docker-compose.observability.yml up --build
+```
+
+Grafana (localhost:3000) auto-loads the *WorkNest API* dashboard; Prometheus loads the alert
+rules in `ops/alerts.yml`; Alertmanager routes are in `ops/alertmanager.yml`. In production use
+Grafana Cloud (scrape `/metrics` with the bearer token) and reuse the same rules and dashboard.
+
 ## Logs
 
 JSON lines on stdout (pino). Every request logs `req.id`; the same id is returned as

@@ -3,13 +3,13 @@ import { randomUUID } from 'node:crypto';
 import compression from 'compression';
 import cors from 'cors';
 import express from 'express';
-import rateLimit from 'express-rate-limit';
 import helmet from 'helmet';
 import pinoHttp from 'pino-http';
 
 import { env } from './config/env.js';
 import { stripeWebhook } from './controllers/booking.controller.js';
 import { errorHandler, notFound } from './middleware/error.js';
+import { createLimiter } from './middleware/rateLimit.js';
 import { logger } from './observability/logger.js';
 import { metricsMiddleware } from './observability/metrics.js';
 import routes from './routes/index.js';
@@ -76,11 +76,10 @@ export function createApp() {
 
   app.use(
     '/api',
-    rateLimit({
+    createLimiter({
+      name: 'global',
       windowMs: 15 * 60 * 1000,
       limit: env.isTest ? 10_000 : 500,
-      standardHeaders: 'draft-7',
-      legacyHeaders: false,
       skip: (req) => QUIET_PATHS.has(`/api${req.path}`), // orchestrator probes must never be throttled
       message: { success: false, message: 'Too many requests, please slow down' },
     }),
