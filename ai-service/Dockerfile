@@ -2,7 +2,7 @@
 #
 # The image is the artifact: models are baked in, not downloaded at boot. Cold starts are
 # instant, deploys are immutable, and rolling back is re-tagging an image.
-FROM python:3.12-slim
+FROM python:3.15-slim
 
 # Pull OS security patches released since the base image was built (CI's Trivy scan gates on these)
 RUN apt-get update && apt-get upgrade -y --no-install-recommends && rm -rf /var/lib/apt/lists/*
