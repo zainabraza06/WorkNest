@@ -4,6 +4,7 @@ import { Loader2 } from 'lucide-react';
 
 import { AppLayout } from '@/components/layout/AppLayout';
 import { GuestOnly, RequireAuth } from '@/components/layout/RequireAuth';
+import { ServerWakeNotice } from '@/components/layout/ServerWakeNotice';
 import LandingPage from '@/pages/LandingPage';
 
 const LoginPage = lazy(() => import('@/pages/auth/LoginPage'));
@@ -36,6 +37,7 @@ function PageFallback() {
 export default function App() {
   return (
     <Suspense fallback={<PageFallback />}>
+      <ServerWakeNotice />
       <Routes>
         <Route element={<AppLayout />}>
           <Route index element={<LandingPage />} />

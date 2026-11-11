@@ -89,6 +89,16 @@ with no third-party account.
 
 `RENDER_EXTERNAL_URL` is set by Render automatically; locally nothing is pinged.
 
+### What visitors see when the server is asleep
+
+On every page load the web app asks `/api/health/ready` (`frontend/src/hooks/useServerWake.js`).
+If it answers within about 1.5 s nothing is shown. If not, a card says **"Server is waking up"**
+with a live timer and an explanation of the free tier; when the server answers it changes to
+**"Server is up. You can continue working"** with a **Continue** button. "Browse while waiting"
+dismisses it early, and after three silent minutes it offers **Try again**. A server that answered
+within the last 10 minutes in the same tab is trusted, so the check is not repeated on every
+navigation. Screenshots: `docs/screenshots/15-server-waking.png`, `16-server-ready-continue.png`.
+
 **Limits you should know:**
 - It cannot wake a service that is already asleep (a sleeping process runs no timers). After a
   deploy or a long outage the first visitor, or an external pinger such as cron-job.org or

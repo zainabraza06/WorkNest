@@ -614,7 +614,7 @@ cd ai-service && python scripts/validate_models.py   # the promotion gate CI enf
 | --- | --- |
 | Backend (Vitest + Supertest) | **168 / 168** passed, 17 files; coverage 87.6% lines, 83.6% statements, 82.9% functions, 66.7% branches |
 | AI service (pytest) | **30 / 30** passed |
-| Web (Vitest) + production build | **25 / 25** passed, build OK |
+| Web (Vitest) + production build | **38 / 38** passed, build OK |
 | Mobile (`flutter analyze` + `flutter test`) | no analyzer issues, **22 / 22** passed; also run on an Android emulator against the live API (sign-in, browse, negotiate, post a job, worker earnings) |
 | Live smoke test (API + web) | all checks passed with Redis connected |
 | End-to-end feature suite (`scripts/e2e.mjs`, real HTTP + Stripe test cards) | **64 / 64** passed |
