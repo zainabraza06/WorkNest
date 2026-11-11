@@ -27,8 +27,49 @@ AI service [worknest-ai.onrender.com](https://worknest-ai.onrender.com/health)
 - [Security controls and known gaps](docs/SECURITY.md)
 - `scripts/smoke-test.sh` (post-deploy checks), `loadtest/k6-api.js` (latency budgets)
 
+## Tech stack
+
+| Layer | Technology |
+| --- | --- |
+| **Web** | React 19, Vite, Tailwind CSS v4, React Router, TanStack Query, Zustand, Axios, Socket.io client, Stripe Elements, Lucide icons |
+| **Mobile** | Flutter 3 (Android/iOS), Provider, `flutter_secure_storage` (Keychain/Keystore), `http` client with retry, animated CustomPaint logo |
+| **API** | Node.js, Express 5, Mongoose 9, Zod validation, JWT (with `tokenVersion` revocation), bcrypt, Socket.io, Multer |
+| **AI service** | Python, FastAPI, Pydantic, scikit-learn, fastembed (semantic embeddings), pandas, joblib |
+| **Data** | MongoDB Atlas (replica set, 2dsphere + text indexes), Redis (Upstash) for shared rate limits and the Socket.io adapter |
+| **Payments / media** | Stripe (test mode, escrow via manual capture), Cloudinary (images and signed private ID documents) |
+| **Observability** | pino structured logs with request ids, Prometheus metrics (`/metrics`), Grafana dashboard, Alertmanager rules, optional Sentry |
+| **Security** | helmet (strict API CSP), CORS allow-list, per-IP and per-account rate limiting, env guard in production, gitleaks, Trivy, `npm audit` gate, Dependabot |
+| **Testing** | Vitest + Supertest + mongodb-memory-server (API), Vitest + Testing Library (web), pytest (AI), `flutter test`, k6 load profile, post-deploy smoke test |
+| **DevOps** | Docker (non-root, read-only, patched images), docker-compose (+ observability overlay), GitHub Actions CI, Render blueprint (`render.yaml`), Vercel |
+| **Hosting** | Vercel (web), Render (API + AI service), MongoDB Atlas, Upstash Redis |
+
+---
+
+## Screenshots
+
+Captured from the live deployment.
+
+| | |
+| --- | --- |
+| ![Landing](docs/screenshots/01-landing.png) | ![Discover workers](docs/screenshots/02-discover-workers.png) |
+| **Landing** | **Discover workers** (AI-ranked, Trust Score) |
+| ![Worker profile](docs/screenshots/03-worker-profile.png) | ![Login](docs/screenshots/04-login.png) |
+| **Worker profile** | **Sign in** (animated logo) |
+| ![Client dashboard](docs/screenshots/05-client-dashboard.png) | ![Post a job with fair price guide](docs/screenshots/06-post-job-fair-price.png) |
+| **Client dashboard** | **Post a job** with the AI fair-price guide |
+| ![Negotiations](docs/screenshots/07-negotiations.png) | ![Bookings](docs/screenshots/08-bookings.png) |
+| **Negotiations** | **Bookings history** (worker view) |
+| ![Worker: browse jobs](docs/screenshots/09-worker-browse-jobs.png) | ![Worker earnings](docs/screenshots/10-worker-earnings.png) |
+| **Worker: browse jobs** | **Worker earnings and payouts** |
+| ![Admin console](docs/screenshots/11-admin-console.png) | ![AI service OpenAPI](docs/screenshots/12-ai-service-openapi.png) |
+| **Admin console** | **AI service** (FastAPI OpenAPI docs) |
+
+---
+
 ## Contents
 
+- [Tech stack](#tech-stack)
+- [Screenshots](#screenshots)
 - [Architecture](#architecture)
 - [Features](#features)
 - [Money: escrow, payouts and disputes](#money-escrow-payouts-and-disputes)
@@ -545,6 +586,17 @@ cd ai-service && python scripts/validate_models.py   # the promotion gate CI enf
 | `reviews`, `ai`, `ranking`, `history`, `admin` | ratings, fallbacks, the ranker's gates, seeded-history integrity |
 | `ops` | health probes, request ids, security headers, metrics cardinality, session revocation, price cache, production config guard, graceful drain |
 | `redis` | limiter works in memory and **fails open** when Redis errors |
+
+### Last full run (all green)
+
+| Suite | Result |
+| --- | --- |
+| Backend (Vitest + Supertest) | **154 / 154** passed, 16 files; coverage 87.6% lines, 83.6% statements, 82.9% functions, 66.7% branches |
+| AI service (pytest) | **30 / 30** passed |
+| Web (Vitest) + production build | **25 / 25** passed, build OK |
+| Mobile (`flutter analyze` + `flutter test`) | no analyzer issues, **18 / 18** passed |
+| Live smoke test (API + web) | all checks passed with Redis connected |
+| Browser check (headless Chromium, live site) | no CSP violations, console errors or failed requests across the main pages |
 
 Backend tests run against an in-memory MongoDB (`mongodb-memory-server`, downloaded on first run)
 with Stripe, Cloudinary and the AI client mocked — no external services, no test keys needed.
