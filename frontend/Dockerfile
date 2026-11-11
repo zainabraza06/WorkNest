@@ -25,6 +25,11 @@ RUN npm run build
 # tier does not start from root and the container needs no NET_BIND_SERVICE capability.
 FROM nginxinc/nginx-unprivileged:1.27-alpine
 
+# Patch OS packages (needs root; the image drops back to the unprivileged user right after)
+USER root
+RUN apk upgrade --no-cache
+USER 101
+
 # Templates in /etc/nginx/templates are rendered with envsubst at start-up. Limiting the
 # substituted variables keeps nginx's own $uri / $host from being eaten.
 ENV NGINX_ENVSUBST_FILTER=API_ORIGIN     API_ORIGIN=""
