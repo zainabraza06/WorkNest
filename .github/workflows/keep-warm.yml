@@ -4,11 +4,9 @@ name: Keep services warm
 # service takes ~30s to wake — longer than the backend's request timeout — so the first search
 # after an idle period silently falls back to keyword results.
 #
-# IMPORTANT: this workflow is an uptime CHECK and a manual wake-up, not a keep-alive. GitHub
-# throttles scheduled workflows heavily (the run history shows it firing every several hours
-# despite the cron below), so it cannot hold a 15-minute idle window open. The reliable
-# mechanism is the API's own KEEP_ALIVE setting (docs/MONITORING.md, "Keeping free-tier
-# services awake"), optionally with an external pinger such as cron-job.org or UptimeRobot.
+# This workflow is an uptime CHECK and a manual wake-up, not a keep-alive. GitHub throttles
+# scheduled workflows heavily (the run history shows it firing every several hours despite the
+# cron below), so it cannot hold a 15-minute idle window open.
 #
 # It fails, and GitHub emails you, if the AI path or the database is down.
 #

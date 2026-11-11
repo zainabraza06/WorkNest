@@ -45,16 +45,6 @@ const schema = z.object({
   // How many reverse proxies sit in front of the API (Render/Heroku = 1). Wrong values let
   // clients spoof their IP and walk around the rate limiter.
   TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(1),
-
-  // ── Keep-alive (free-tier hosts that sleep idle services) ──
-  // While awake, the API pings its own public URL and the AI service so the platform never sees
-  // it idle. Off by default; see src/keepAlive.js for the free-hours budget.
-  KEEP_ALIVE: z.enum(['true', 'false']).default('false').transform((v) => v === 'true'),
-  KEEP_ALIVE_INTERVAL_SEC: z.coerce.number().int().min(60).max(840).default(600), // under Render's 15 min idle limit
-  KEEP_ALIVE_HOURS: z.string().optional().or(z.literal('').transform(() => undefined)), // e.g. "7-23"; unset = always
-  KEEP_ALIVE_TZ: z.string().default('Asia/Karachi'),
-  KEEP_ALIVE_URLS: z.string().optional().or(z.literal('').transform(() => undefined)), // extra comma-separated URLs
-  RENDER_EXTERNAL_URL: z.string().url().optional().or(z.literal('').transform(() => undefined)), // set by Render itself
 });
 
 // Rules that only matter once real users and real money are involved

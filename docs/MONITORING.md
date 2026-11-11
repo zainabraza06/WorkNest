@@ -63,31 +63,18 @@ has a single hook, `ErrorReporting.onReport`, and the web `ErrorBoundary` calls
 ## Uptime
 
 - `.github/workflows/keep-warm.yml` checks both services and fails (GitHub emails you) if the DB
-  or AI models are not serving. **It does not keep Render awake on its own:** GitHub throttles
-  scheduled workflows (the `*/10` cron actually fires every several hours, see the run history),
-  while Render sleeps a free service after 15 idle minutes. Run it by hand before a demo.
-  The reliable mechanism is the in-app keep-alive below.
+  or AI models are not serving. Run it by hand from the Actions tab a few minutes before a demo
+  to wake them. It is an uptime check, not a way to keep Render awake: GitHub throttles scheduled
+  workflows, so the `*/10` cron actually fires every several hours.
 - `scripts/smoke-test.sh <api> <web>` is the deeper post-deploy check (headers, CORS, auth,
   metrics lock-down). Run it after every release.
 - Point an external monitor (UptimeRobot / Better Stack) at `/api/health/ready`.
 
-## Keeping free-tier services awake
+## Free-tier cold starts
 
 Render's free tier sleeps a web service after ~15 minutes without inbound traffic, and the next
-request waits 30 to 50 s. Setting `KEEP_ALIVE=true` on the API makes it call its **own public
-URL and the AI service** every 10 minutes while it is awake (`backend/src/keepAlive.js`, covered
-by `tests/keepAlive.test.js`). That is real inbound traffic, so the idle clock never expires,
-with no third-party account.
-
-| Variable | Meaning |
-| --- | --- |
-| `KEEP_ALIVE` | `true` to enable (default off) |
-| `KEEP_ALIVE_INTERVAL_SEC` | ping period, 60 to 840 (default 600; must stay under Render's 15 min) |
-| `KEEP_ALIVE_HOURS` | optional daily window, e.g. `8-20`; outside it nothing is pinged so the services sleep |
-| `KEEP_ALIVE_TZ` | time zone for the window (default `Asia/Karachi`) |
-| `KEEP_ALIVE_URLS` | extra comma-separated URLs to ping (e.g. a status page) |
-
-`RENDER_EXTERNAL_URL` is set by Render automatically; locally nothing is pinged.
+request waits 30 to 50 s. A paid plan removes that (`render.yaml` already targets one); on the
+free tier the apps tell the user what is happening instead of leaving them on a spinner.
 
 ### What visitors see when the server is asleep
 
@@ -104,13 +91,3 @@ The **mobile app does the same** (`flutter_app/lib/state/server_wake_state.dart`
 server answers within about 1.5 s, and otherwise shows the same waking, ready and retry cards.
 Its request timeout is 60 s so the first sign-in after a quiet spell does not fail while the
 server boots.
-
-**Limits you should know:**
-- It cannot wake a service that is already asleep (a sleeping process runs no timers). After a
-  deploy or a long outage the first visitor, or an external pinger such as cron-job.org or
-  UptimeRobot calling `/api/health/live` every 5 minutes, wakes it, and the keep-alive holds it from there.
-- **Free-hours budget.** Render's free tier gives a workspace about 750 instance-hours a month
-  (check your Billing page). One service awake 24/7 is 720 h; **two (API plus AI) is ~1,440 h and
-  exhausts the budget around day 15**, after which Render suspends them until next month. With
-  `KEEP_ALIVE_HOURS=8-20` the pair uses about 735 h. A paid plan (`render.yaml` already targets
-  one) removes the sleeping, and the budget, entirely; then leave `KEEP_ALIVE` off.
