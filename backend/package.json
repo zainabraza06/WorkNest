@@ -41,9 +41,9 @@
     "zod": "^4.6.2"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^5.0.0",
+    "@vitest/coverage-v8": "^5.1.0",
     "mongodb-memory-server": "^11.2.0",
     "supertest": "^7.2.2",
-    "vitest": "^5.0.0"
+    "vitest": "^5.1.0"
   }
 }
