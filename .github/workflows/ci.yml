@@ -216,9 +216,12 @@ jobs:
       # The frontend image's config is only proven by actually serving a request through it
       - name: Smoke-test the frontend container
         run: |
-          docker run -d --name web -p 8080:8080 -e API_ORIGIN=https://api.example.com worknest-web:ci
+          docker run -d --name web -p 8080:8080 -e API_ORIGIN=https://api.example.com -e API_WS_ORIGIN=wss://api.example.com worknest-web:ci
           for i in $(seq 1 20); do curl -fsS http://localhost:8080/healthz && break || sleep 1; done
           curl -fsS http://localhost:8080/workers/123 | grep -q '<div id="root">'   # SPA fallback works
           curl -sI http://localhost:8080/ | grep -qi 'x-content-type-options: nosniff'
-          curl -sI http://localhost:8080/ | grep -qi 'content-security-policy-report-only'
+          # The CSP is enforced (not Report-Only) and allows the API's origin and its WebSocket address
+          curl -sI http://localhost:8080/ | grep -qi '^content-security-policy: '
+          ! curl -sI http://localhost:8080/ | grep -qi 'report-only'
+          curl -sI http://localhost:8080/ | grep -q 'connect-src[^;]*https://api.example.com[^;]*wss://api.example.com'
           test "$(docker exec web id -u)" != "0"                                      # not root
